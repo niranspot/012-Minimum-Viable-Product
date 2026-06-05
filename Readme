@@ -1,0 +1,53 @@
+# Dev-1 Contribution
+
+## Project Structure & Configuration
+
+### Core Configuration
+1. `.env` - Environment variables
+2. `app/Config/config.php` - Loads .env, defines constants
+3. `app/Config/database.php` - PDO connection via `getDB()`
+4. `app/Config/constants.php` - Roles, statuses, HTTP codes
+
+### Security Components
+5. `app/Security/AES.php` - AES-256-CBC encrypt/decrypt (random IV, stored with cipher)
+6. `app/Security/JWT.php` - Generates and validates access tokens
+7. `app/Security/CSRF.php` - Generates and validates CSRF via session using `getallheaders()`
+8. `app/Security/Hash.php` - bcrypt password hash and verify
+
+### Middleware
+9. `app/Middleware/AuthMiddleware.php` - Reads Bearer token from Authorization header, returns payload
+10. `app/Middleware/CsrfMiddleware.php` - Validates X-CSRF-Token header, skips auth routes
+
+### Helpers
+11. `app/Helpers/Response.php` - Plain JSON response (AES on response disabled for now)
+12. `app/Helpers/Validator.php` - Required, email, min, in validation
+
+### Routing & Controllers
+13. `app/Routes/api.php` - Route function maps METHOD + URI to controller
+14. `app/Controllers/AuthController.php` - Register, login, refresh, csrfToken
+
+### Services
+15. `app/Services/AuthService.php` - Register, login, refresh, logout logic
+
+### Entry Point
+16. `public/index.php` - Entry point, loads CSRF middleware, loads routes
+17. `public/.htaccess` - Rewrites all requests to index.php
+
+---
+
+## Authentication Flow
+
+### Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/csrf-token` | Returns CSRF token, stored in PHP session |
+| POST | `/register` | Accepts raw JSON (AES disabled for now), creates user |
+| POST | `/login` | Returns `access_token` in response body, sets `refresh_token` in HttpOnly cookie |
+| POST | `/refresh-token` | Reads refresh token from cookie, returns new access token |
+
+### Token Management
+
+* **Access Token** → Sent by client in `Authorization: Bearer <token>` header
+* **Refresh Token** → Stored in `users` table columns (`refresh_token`, `refresh_token_expires_at`)
+* **No separate refresh_tokens table** - Tokens stored directly on users table
