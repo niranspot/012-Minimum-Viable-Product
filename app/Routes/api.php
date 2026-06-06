@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../Controllers/AuthController.php';
 
-function route(string $method, string $uri, callable $handler): void {
+function route($method,$uri, $handler){
     $requestMethod = $_SERVER['REQUEST_METHOD'];
     $requestUri    = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 

@@ -17,4 +17,4 @@ echo "=== DECRYPT ===\n";
 print_r($decrypted);
 echo "</br>";
 
-echo bin2hex(random_bytes(16)); 
+// echo bin2hex(random_bytes(16)); 

@@ -49,7 +49,7 @@ class AuthService {
         $accessToken  = JWT::generateAccess([
             'user_id'   => $user['id'],
             'role'      => $user['role'],
-            'tenant_id' => $user['tenant_id'],
+            'tenant_id' => $user['tenant_id']
         ]);
         $refreshToken = bin2hex(random_bytes(32));
         $expiresAt    = date('Y-m-d H:i:s', time() + JWT_REFRESH_EXPIRE);
