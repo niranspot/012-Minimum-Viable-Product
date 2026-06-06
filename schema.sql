@@ -17,7 +17,7 @@ INSERT INTO tenants (name, code, status) VALUES ('Default Hospital', 'DEFAULT001
 -- Users (all roles login from here)
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id INT NOT NULL,
+    tenant_id INT NOT NULL DEFAULT 1,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
@@ -32,10 +32,10 @@ CREATE TABLE users (
 -- Patients (medical record, linked to user)
 CREATE TABLE patients (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id INT NOT NULL,
+    tenant_id INT NOT NULL DEFAULT 1,
     user_id INT NOT NULL,
-    blood_group VARCHAR(5),
-    dob DATE,
+    blood_group TEXT,
+    dob TEXT,
     gender ENUM('male', 'female', 'other'),
     address TEXT,
     emergency_contact VARCHAR(15),
@@ -48,7 +48,7 @@ CREATE TABLE patients (
 -- Appointments
 CREATE TABLE appointments (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id INT NOT NULL,
+    tenant_id INT NOT NULL DEFAULT 1,
     patient_id INT NOT NULL,
     doctor_id INT NOT NULL,
     appointment_date DATETIME NOT NULL,
@@ -63,7 +63,7 @@ CREATE TABLE appointments (
 -- Prescriptions
 CREATE TABLE prescriptions (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id INT NOT NULL,
+    tenant_id INT NOT NULL DEFAULT 1,
     appointment_id INT NOT NULL,
     doctor_id INT NOT NULL,
     patient_id INT NOT NULL,
@@ -79,7 +79,7 @@ CREATE TABLE prescriptions (
 -- Staff (doctors, nurses, etc.)
 CREATE TABLE staff (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id INT NOT NULL,
+    tenant_id INT NOT NULL DEFAULT 1,
     user_id INT NOT NULL,
     specialization VARCHAR(100),
     status ENUM('active', 'inactive') DEFAULT 'active',
@@ -91,7 +91,7 @@ CREATE TABLE staff (
 -- Billing
 CREATE TABLE billing (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id INT NOT NULL,
+    tenant_id INT NOT NULL DEFAULT 1,
     patient_id INT NOT NULL,
     appointment_id INT NOT NULL,
     amount DECIMAL(10,2) NOT NULL,
@@ -105,7 +105,7 @@ CREATE TABLE billing (
 -- Messages/Notes
 CREATE TABLE messages (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    tenant_id INT NOT NULL,
+    tenant_id INT NOT NULL DEFAULT 1,
     appointment_id INT NOT NULL,
     sender_id INT NOT NULL,
     message TEXT NOT NULL,
@@ -120,7 +120,6 @@ CREATE TABLE messages (
 
 -- dummy data for testing
 -- {
---     "tenant_id": 1,
 --     "name": "Test Admin",
 --     "email": "admin@test.com",
 --     "password": "123456",

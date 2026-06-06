@@ -6,12 +6,12 @@ require_once __DIR__ . '/../Security/CSRF.php';
 require_once __DIR__ . '/../Security/AES.php';
 
 class AuthController {
-    public static function csrfToken(): void {
+    public static function csrfToken() {
         $token = CSRF::generate();
         Response::success('CSRF token generated', ['csrf_token' => $token]);
     }
 
-    public static function register(): void {
+    public static function register(){
         $payload    = json_decode(file_get_contents('php://input'), true);
         // $payload = AES::decrypt($body['payload'] ?? '');
 
@@ -30,7 +30,7 @@ class AuthController {
         Response::success('User registered', $result, 201);
     }
 
-    public static function login(): void {
+    public static function login(){
         $payload    = json_decode(file_get_contents('php://input'), true);
         // $payload = AES::decrypt($body['payload'] ?? '');
 
