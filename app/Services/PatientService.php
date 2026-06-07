@@ -1,15 +1,47 @@
 <?php
-require_once __DIR__ . '/../Repositories/PatientRepository.php';
 require_once __DIR__ . '/../Config/database.php';
+require_once __DIR__ . '/../Security/AES.php';
 require_once __DIR__ . '/../Helpers/Response.php';
 
 class PatientService {
 
-    // Create a new patient profile linked to an existing user
-    public static function create( $data, $tenantId) {
+    // Sensitive fields — encrypted before storing, decrypted after fetching
+    private static array $encryptedFields = [
+        'blood_group',
+        'dob',
+        'address',
+        'emergency_contact',
+    ];
+
+    private static function encryptFields(array $data): array {
+        foreach (self::$encryptedFields as $field) {
+            if (!empty($data[$field])) {
+                $data[$field] = AES::encrypt((string) $data[$field]);
+            }
+        }
+        return $data;
+    }
+
+    private static function decryptRow(array $row): array {
+        foreach (self::$encryptedFields as $field) {
+            if (!empty($row[$field])) {
+                $row[$field] = AES::decrypt($row[$field]);
+            }
+        }
+        return $row;
+    }
+
+    private static function decryptRows(array $rows): array {
+        return array_map([self::class, 'decryptRow'], $rows);
+    }
+
+    // ---------------------------------------------------------------
+    // POST /patients — Create patient profile
+    // ---------------------------------------------------------------
+    public static function create(array $data, int $tenantId): array {
         $db = getDB();
 
-        // The user_id must belong to this tenant and have role 'patient'
+        // user_id must be an active patient-role user in this tenant
         $stmt = $db->prepare(
             "SELECT id FROM users
              WHERE id = ? AND tenant_id = ? AND role = 'patient' AND status = 'active'"
@@ -20,46 +52,116 @@ class PatientService {
         }
 
         // Prevent duplicate patient profile for same user
-        $existing = PatientRepository::findByUserId($data['user_id'], $tenantId);
-        if ($existing) {
+        $stmt = $db->prepare(
+            "SELECT id FROM patients
+             WHERE user_id = ? AND tenant_id = ? AND deleted_at IS NULL"
+        );
+        $stmt->execute([$data['user_id'], $tenantId]);
+        if ($stmt->fetch()) {
             Response::error('Patient profile already exists for this user', 400);
         }
 
-        $data['tenant_id'] = $tenantId;
-        $patientId = PatientRepository::create($data);
+        // Encrypt sensitive fields before storing
+        $data = self::encryptFields($data);
 
-        return ['patient_id' => $patientId];
+        $stmt = $db->prepare(
+            "INSERT INTO patients (tenant_id, user_id, blood_group, dob, gender, address, emergency_contact)
+             VALUES (?, ?, ?, ?, ?, ?, ?)"
+        );
+        $stmt->execute([
+            $tenantId,
+            $data['user_id'],
+            $data['blood_group']       ?? null,
+            $data['dob']               ?? null,
+            $data['gender']            ?? null,
+            $data['address']           ?? null,
+            $data['emergency_contact'] ?? null,
+        ]);
+
+        return ['patient_id' => (int) $db->lastInsertId()];
     }
 
-    // List all patients in the tenant
-    public static function list($tenantId){
-        return PatientRepository::findAllByTenant($tenantId);
+    // ---------------------------------------------------------------
+    // GET /patients — List all patients in tenant
+    // ---------------------------------------------------------------
+    public static function list(int $tenantId): array {
+        $db   = getDB();
+        $stmt = $db->prepare(
+            "SELECT p.id, p.user_id, p.blood_group, p.dob, p.gender, p.address,
+                    p.emergency_contact, p.created_at,
+                    u.name, u.email
+             FROM patients p
+             JOIN users u ON u.id = p.user_id
+             WHERE p.tenant_id = ? AND p.deleted_at IS NULL"
+        );
+        $stmt->execute([$tenantId]);
+        return self::decryptRows($stmt->fetchAll());
     }
 
-    // Update a patient's medical info
-    public static function update( $id, $data, $tenantId) {
-        $patient = PatientRepository::findById($id, $tenantId);
-        if (!$patient) {
+    // ---------------------------------------------------------------
+    // PUT /patients/{id} — Update patient
+    // ---------------------------------------------------------------
+    public static function update(int $id, array $data, int $tenantId): array {
+        $db = getDB();
+
+        // Check patient exists in this tenant and is not deleted
+        $stmt = $db->prepare(
+            "SELECT id FROM patients
+             WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL"
+        );
+        $stmt->execute([$id, $tenantId]);
+        if (!$stmt->fetch()) {
             Response::error('Patient not found', 404);
         }
 
-        $updated = PatientRepository::update($id, $tenantId, $data);
-        if (!$updated) {
+        // Encrypt sensitive fields before storing
+        $data = self::encryptFields($data);
+
+        $stmt = $db->prepare(
+            "UPDATE patients
+             SET blood_group = ?, dob = ?, gender = ?, address = ?, emergency_contact = ?
+             WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL"
+        );
+        $stmt->execute([
+            $data['blood_group']       ?? null,
+            $data['dob']               ?? null,
+            $data['gender']            ?? null,
+            $data['address']           ?? null,
+            $data['emergency_contact'] ?? null,
+            $id,
+            $tenantId,
+        ]);
+
+        if ($stmt->rowCount() === 0) {
             Response::error('No changes were made', 400);
         }
 
         return ['patient_id' => $id];
     }
 
-    // Soft delete a patient record
-    public static function delete($id, $tenantId) {
-        $patient = PatientRepository::findById($id, $tenantId);
-        if (!$patient) {
+    // ---------------------------------------------------------------
+    // DELETE /patients/{id} — Soft delete
+    // ---------------------------------------------------------------
+    public static function delete(int $id, int $tenantId): array {
+        $db = getDB();
+
+        // Check patient exists
+        $stmt = $db->prepare(
+            "SELECT id FROM patients
+             WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL"
+        );
+        $stmt->execute([$id, $tenantId]);
+        if (!$stmt->fetch()) {
             Response::error('Patient not found', 404);
         }
 
-        $deleted = PatientRepository::softDelete($id, $tenantId);
-        if (!$deleted) {
+        $stmt = $db->prepare(
+            "UPDATE patients SET deleted_at = NOW()
+             WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL"
+        );
+        $stmt->execute([$id, $tenantId]);
+
+        if ($stmt->rowCount() === 0) {
             Response::error('Could not delete patient', 400);
         }
 
