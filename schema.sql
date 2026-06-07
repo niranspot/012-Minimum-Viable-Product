@@ -115,6 +115,9 @@ CREATE TABLE messages (
     FOREIGN KEY (sender_id) REFERENCES users(id)
 );
 
+ALTER TABLE patients MODIFY emergency_contact TEXT;
+ALTER TABLE patients MODIFY blood_group TEXT;
+ALTER TABLE patients MODIFY dob TEXT;
 
 
 

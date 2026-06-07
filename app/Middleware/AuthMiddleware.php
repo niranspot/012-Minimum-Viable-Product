@@ -13,7 +13,6 @@ class AuthMiddleware {
         
         $token   = $matches[1];
         $payload = JWT::validate($token);
-
         if (empty($payload)) {
             Response::error('Invalid or expired token', 401);
         }

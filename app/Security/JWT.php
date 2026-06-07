@@ -33,8 +33,8 @@ class JWT {
 
         return $payload;
     }
-
-    private static function base64url(string $data): string {
+     private static function base64url(string $data): string {
         return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
     }
 }
+ 
