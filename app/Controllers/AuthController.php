@@ -50,4 +50,10 @@ class AuthController {
         $result = AuthService::refresh();
         Response::success('Token refreshed', $result);
     }
+
+    public static function logout(): void {
+        $user = AuthMiddleware::handle();
+        AuthService::logout($user['user_id']);
+        Response::success('Logged out successfully');
+    }
 }
