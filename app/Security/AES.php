@@ -2,9 +2,9 @@
 require_once __DIR__ . '/../Config/config.php';
 
 class AES {
-    private static string $cipher = 'AES-256-CBC';
+    private static $cipher = 'AES-256-CBC';
 
-    public static function encrypt(string $plainText): string {
+    public static function encrypt($plainText) {
         // Generate random IV every time
         $iv        = random_bytes(openssl_cipher_iv_length(self::$cipher));
         $encrypted = openssl_encrypt($plainText, self::$cipher, AES_KEY, 0, $iv);
@@ -13,7 +13,7 @@ class AES {
         return base64_encode($iv . $encrypted);
     }
 
-    public static function decrypt(string $encryptedData): string {
+    public static function decrypt($encryptedData) {
         $data     = base64_decode($encryptedData);
         $ivLength = openssl_cipher_iv_length(self::$cipher);
 

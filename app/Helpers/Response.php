@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../Security/AES.php';
 
 class Response {
-    public static function send(int $httpCode, string $status, string $message, array $data = []): void {
+    public static function send($httpCode, $status, $message,  $data = []) {
         http_response_code($httpCode);
         header('Content-Type: application/json');
 
@@ -22,11 +22,11 @@ class Response {
         exit;
     }
 
-    public static function success(string $message, array $data = [], int $code = 200): void {
+    public static function success( $message, $data = [],  $code = 200){
         self::send($code, 'success', $message, $data);
     }
 
-    public static function error(string $message, int $code = 400): void {
+    public static function error( $message, $code = 400){
         self::send($code, 'error', $message);
     }
 }
