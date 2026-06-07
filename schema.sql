@@ -38,7 +38,7 @@ CREATE TABLE patients (
     dob TEXT,
     gender ENUM('male', 'female', 'other'),
     address TEXT,
-    emergency_contact VARCHAR(15),
+    emergency_contact TEXT ,
     deleted_at TIMESTAMP NULL DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id),

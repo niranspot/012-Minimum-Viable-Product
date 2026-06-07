@@ -116,3 +116,52 @@
 **Partial update** — `PUT /patients/{id}` uses `array_key_exists()` to merge incoming fields with existing data, so sending only `{"address": "Chennai"}` updates only address without nulling out other fields.
 
 **CSRF exclusion** — new API routes are JWT-protected (stateless), so they are excluded from session-based CSRF checks in `CsrfMiddleware`. Auth is handled entirely by `AuthMiddleware::handle()` + `allowRoles()`.
+
+
+
+--vasuki
+
+## Dev-3 STAFF & PRESCRIPTION API UPDATE
+================================
+## NEW FILES
+---------
+app/Controllers/StaffController.php
+app/Controllers/PrescriptionController.php
+app/Services/StaffService.php
+app/Services/PrescriptionService.php
+app/Routes/api.php (updated)
+
+## STAFF ENDPOINTS
+---------------
+GET /staff - list all staff
+GET /staff/:id - get one
+POST /staff - create { "user_id":2, "specialization":"Cardiology", "status":"active" }
+PUT /staff/:id - update { "specialization":"Neurology", "status":"inactive" }
+DELETE /staff/:id - delete
+
+
+## PRESCRIPTION ENDPOINTS
+----------------------
+GET /prescriptions - list all
+GET /prescriptions/:id - get one
+GET /patients/:id/prescriptions - by patient
+GET /appointments/:id/prescription - by appointment
+POST /prescriptions - create { "patient_id":1, "appointment_id":1, "medicines":"..." }
+PUT /prescriptions/:id - update { "medicines":"..." }
+PATCH /prescriptions/:id/status - { "status":"verified" }
+DELETE /prescriptions/:id - delete
+STATUS FLOW: created → verified → dispensed
+
+
+## ENCRYPTION
+----------
+medicines field in prescriptions table is AES encrypted on save, decrypted on read.
+AES_KEY must be set in .env
+
+## ROLE PERMISSIONS
+----------------
+Staff create/update/delete → admin only
+Staff read → admin, doctor, nurse
+Prescription create → doctor only
+Prescription status update → admin, doctor, pharmacist
+Prescription read → admin, doctor, pharmacist, nurse
