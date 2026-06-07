@@ -39,8 +39,8 @@ define('AES_KEY',   getenv('AES_KEY'));
 
 // JWT
 define('JWT_SECRET',          getenv('JWT_SECRET'));
-define('JWT_ACCESS_EXPIRE',   (int) getenv('JWT_ACCESS_EXPIRE'));
-define('JWT_REFRESH_EXPIRE',  (int) getenv('JWT_REFRESH_EXPIRE'));
+define('JWT_ACCESS_EXPIRE',   getenv('JWT_ACCESS_EXPIRE'));
+define('JWT_REFRESH_EXPIRE',   getenv('JWT_REFRESH_EXPIRE'));
 
 // CSRF
 define('CSRF_SECRET',  getenv('CSRF_SECRET'));
