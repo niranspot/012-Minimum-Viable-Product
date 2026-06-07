@@ -132,6 +132,6 @@ routeMatch('PUT', '/prescriptions/:id', [PrescriptionController::class, 'update'
 routeMatch('PATCH', '/prescriptions/:id/status', [PrescriptionController::class, 'updateStatus']);
 routeMatch('DELETE', '/prescriptions/:id', [PrescriptionController::class, 'destroy']);
 routeMatch('GET', '/patients/:id/prescriptions', [PrescriptionController::class, 'byPatient']);
-routeMatch('GET', '/appointments/:id/prescription', [PrescriptionController::class, 'byAppointment']);
+routeMatch('GET', '/appointments/:id/prescriptions', [PrescriptionController::class, 'byAppointment']);
 
 
