@@ -54,7 +54,24 @@
 * **Refresh Token** → Stored in `users` table columns (`refresh_token`, `refresh_token_expires_at`)
 * **No separate refresh_tokens table** - Tokens stored directly on users table
 
+# Billing API
 
+Manages invoices and payment tracking per appointment.
+
+## Endpoints
+
+- POST   /billing          → Generate invoice
+- GET    /billing          → List all invoices
+- PUT    /billing/{id}     → Update payment status
+
+# Messages / Notes API
+
+Stores appointment-based notes between doctor and nurse.
+
+## Endpoints
+
+- POST   /messages                    → Send a note
+- GET    /messages/{appointment_id}   → Get all notes for an appointment
 
 
 ---Mithra
