@@ -4,6 +4,8 @@ require_once __DIR__ . '/../Controllers/PatientController.php';
 require_once __DIR__ . '/../Controllers/AppointmentController.php';
 require_once __DIR__ . '/../Controllers/StaffController.php';
 require_once __DIR__ . '/../Controllers/PrescriptionController.php';
+require_once __DIR__ . '/../Controllers/BillingController.php';
+require_once __DIR__ . '/../Controllers/MessageController.php';
 
 
 //-Niranjan
@@ -70,6 +72,8 @@ function routeMatch($method, $pattern, $handler) {
 //EndPoints
 // Define API routes here. Use route() and routeWithId() for simplicity.
 
+
+//------------------------------------------------------------------------------------------------------
 //-Niranjan
 // Auth routes (no auth middleware needed)-Niranjan
 route('POST', '/register',      [AuthController::class, 'register']);
@@ -79,6 +83,17 @@ route('GET',  '/csrf-token',    [AuthController::class, 'csrfToken']);
 route('POST', '/logout', [AuthController::class, 'logout']);
 
 
+//billing routes (admin, doctor only — enforced inside controller)
+route('POST', '/billing',           [BillingController::class, 'create']);
+route('GET',  '/billing',           [BillingController::class, 'list']);
+routeWithId('PUT', '/billing',      [BillingController::class, 'update']);
+
+// Messaging routes (all roles — enforced inside controller)
+route('POST', '/messages',          [MessageController::class, 'create']);
+routeWithId('GET', '/messages',     [MessageController::class, 'list']);
+
+
+//-------------------------------------------------------------------------------------------------------
 //-Mithra
 // Patient routes  (doctor, nurse only — enforced inside controller)
 route('POST', '/patients',      [PatientController::class, 'create']);
@@ -99,6 +114,7 @@ routeWithId('PUT', '/appointments', [AppointmentController::class, 'update']);
 route('GET', '/calendar', [AppointmentController::class, 'calendar']);
 
 
+//----------------------------------------------------------------------------------------
 //-Vasuki
 // ─── Staff ────────────────────────────────────────────────────────────────────
 route('GET', '/staff', [StaffController::class, 'index']);
@@ -117,3 +133,5 @@ routeMatch('PATCH', '/prescriptions/:id/status', [PrescriptionController::class,
 routeMatch('DELETE', '/prescriptions/:id', [PrescriptionController::class, 'destroy']);
 routeMatch('GET', '/patients/:id/prescriptions', [PrescriptionController::class, 'byPatient']);
 routeMatch('GET', '/appointments/:id/prescription', [PrescriptionController::class, 'byAppointment']);
+
+
