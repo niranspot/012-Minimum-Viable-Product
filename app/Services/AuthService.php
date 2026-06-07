@@ -5,7 +5,7 @@ require_once __DIR__ . '/../Security/JWT.php';
 require_once __DIR__ . '/../Helpers/Response.php';
 
 class AuthService {
-    public static function register(array $data): array {
+    public static function register( $data) {
         $db = getDB();
 
         // Check email exists
@@ -35,7 +35,7 @@ class AuthService {
         return ['user_id' => $db->lastInsertId()];
     }
 
-    public static function login(array $data): array {
+    public static function login($data){
         $db = getDB();
 
         $stmt = $db->prepare("SELECT * FROM users WHERE email = ? AND status = 'active'");
@@ -73,7 +73,7 @@ class AuthService {
         ];
     }
 
-    public static function refresh(): array {
+    public static function refresh() {
         $db = getDB();
 
         // Get refresh token from cookie
@@ -89,7 +89,7 @@ class AuthService {
         $newAccessToken  = JWT::generateAccess([
             'user_id'   => $user['id'],
             'role'      => $user['role'],
-            'tenant_id' => $user['tenant_id'],
+            'tenant_id' => $user['tenant_id']
         ]);
         $newRefreshToken = bin2hex(random_bytes(32));
         $expiresAt       = date('Y-m-d H:i:s', time() + JWT_REFRESH_EXPIRE);
@@ -110,7 +110,7 @@ class AuthService {
         ];
     }
 
-    public static function logout(int $userId): void {
+    public static function logout( $userId){
         $db   = getDB();
         $stmt = $db->prepare("UPDATE users SET refresh_token = NULL, refresh_token_expires_at = NULL WHERE id = ?");
         $stmt->execute([$userId]);
@@ -122,5 +122,10 @@ class AuthService {
             'path'     => '/',
             'samesite' => 'Strict',
         ]);
+
+        // Clear CSRF token from session
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        unset($_SESSION['csrf_token']);
+        session_destroy();
     }
 }
