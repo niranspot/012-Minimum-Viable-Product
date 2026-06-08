@@ -43,12 +43,32 @@ class AuthController {
         }
 
         $result = AuthService::login($payload);
+        $token = CSRF::generate();
+        $result['csrf_token'] = $token;
         Response::success('Login successful', $result);
+
     }
 
     public static function refresh(): void {
         $result = AuthService::refresh();
+        $token = CSRF::generate();
+        $result['csrf_token'] = $token;
         Response::success('Token refreshed', $result);
+    }
+
+    public static function changePassword() {
+        $auth    = AuthMiddleware::handle();
+        $payload = json_decode(file_get_contents('php://input'), true);
+
+        $v = new Validator($payload);
+        $v->required('email')->email('email')
+        ->required('old_password')
+        ->required('new_password')->min('new_password', 6);
+
+        if ($v->fails()) Response::error(implode(', ', $v->errors()), 400);
+
+        AuthService::changePassword($auth, $payload);
+        Response::success('Password changed successfully');
     }
 
     public static function logout(): void {

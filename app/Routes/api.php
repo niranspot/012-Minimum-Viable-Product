@@ -4,9 +4,9 @@ require_once __DIR__ . '/../Controllers/StaffController.php';
 require_once __DIR__ . '/../Controllers/PrescriptionController.php';
 require_once __DIR__ . '/../Controllers/BillingController.php';
 require_once __DIR__ . '/../Controllers/MessageController.php';
-require_once __DIR__ . '/../Controllers/MessageController.php';
 require_once __DIR__ . '/../Controllers/PatientController.php';
 require_once __DIR__ . '/../Controllers/AppointmentController.php';
+require_once __DIR__ . '/../Controllers/DashboardController.php';
 
 // ─── Static route matcher (your original) ────────────────────────────────────
 function route($method, $uri, $handler) {
@@ -76,7 +76,8 @@ function routeWithId($method, $prefix, $handler) {
 route('POST', '/register',      [AuthController::class, 'register']);
 route('POST', '/login',         [AuthController::class, 'login']);
 route('POST', '/refresh-token', [AuthController::class, 'refresh']);
-route('GET',  '/csrf-token',    [AuthController::class, 'csrfToken']);
+// route('GET',  '/csrf-token',    [AuthController::class, 'csrfToken']);
+route('POST', '/change-password', [AuthController::class, 'changePassword']);
 route('POST', '/logout', [AuthController::class, 'logout']);
 
 
@@ -109,6 +110,13 @@ routeWithId('PUT', '/appointments', [AppointmentController::class, 'update']);
 // Calendar route  (all roles — enforced inside controller)-Mithra
 
 route('GET', '/calendar', [AppointmentController::class, 'calendar']);
+
+
+// Dashboard & Reports routes (doctor, admin only — enforced inside controller)
+route('GET', '/dashboard/summary',          [DashboardController::class, 'summary']);
+route('GET', '/dashboard/appointments',     [DashboardController::class, 'appointments']);
+route('GET', '/dashboard/prescriptions',    [DashboardController::class, 'prescriptions']);
+route('GET', '/dashboard/tenant-analytics', [DashboardController::class, 'tenantAnalytics']);
 
 
 //----------------------------------------------------------------------------------------

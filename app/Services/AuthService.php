@@ -67,9 +67,9 @@ class AuthService {
         ]);
 
         return [
-            'access_token' => $accessToken,
-            'role'         => $user['role'],
             'user_id'      => $user['id'],
+            'role'         => $user['role'],
+            'access_token' => $accessToken,
         ];
     }
 
@@ -108,6 +108,32 @@ class AuthService {
         return [
             'access_token' => $newAccessToken,
         ];
+    }
+
+
+    public static function changePassword($auth, $data) {
+        $db = getDB();
+
+        // Get user by id from token
+        $stmt = $db->prepare("SELECT id,email,password FROM users WHERE id = ? AND status = 'active'");
+        $stmt->execute([$auth['user_id']]);
+        $user = $stmt->fetch();
+
+        if (!$user) Response::error('User not found', 404);
+
+        // Email must match logged in user
+        if ($user['email'] !== $data['email']) {
+            Response::error('Email does not match logged in user', 403);
+        }
+
+        // Verify old password
+        if (!Hash::verify($data['old_password'], $user['password'])) {
+            Response::error('Old password is incorrect', 401);
+        }
+
+        // Update new password
+        $stmt = $db->prepare("UPDATE users SET password = ? WHERE id = ?");
+        $stmt->execute([Hash::make($data['new_password']), $user['id']]);
     }
 
     public static function logout( $userId){
