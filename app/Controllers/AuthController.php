@@ -6,12 +6,12 @@ require_once __DIR__ . '/../Security/CSRF.php';
 require_once __DIR__ . '/../Security/AES.php';
 
 class AuthController {
-    public static function csrfToken(): void {
+    public static function csrfToken() {
         $token = CSRF::generate();
         Response::success('CSRF token generated', ['csrf_token' => $token]);
     }
 
-    public static function register(): void {
+    public static function register(){
         $payload    = json_decode(file_get_contents('php://input'), true);
         // $payload = AES::decrypt($body['payload'] ?? '');
 
@@ -30,7 +30,7 @@ class AuthController {
         Response::success('User registered', $result, 201);
     }
 
-    public static function login(): void {
+    public static function login(){
         $payload    = json_decode(file_get_contents('php://input'), true);
         // $payload = AES::decrypt($body['payload'] ?? '');
 
@@ -43,11 +43,37 @@ class AuthController {
         }
 
         $result = AuthService::login($payload);
+        $token = CSRF::generate();
+        $result['csrf_token'] = $token;
         Response::success('Login successful', $result);
+
     }
 
     public static function refresh(): void {
         $result = AuthService::refresh();
+        $token = CSRF::generate();
+        $result['csrf_token'] = $token;
         Response::success('Token refreshed', $result);
+    }
+
+    public static function changePassword() {
+        $auth    = AuthMiddleware::handle();
+        $payload = json_decode(file_get_contents('php://input'), true);
+
+        $v = new Validator($payload);
+        $v->required('email')->email('email')
+        ->required('old_password')
+        ->required('new_password')->min('new_password', 6);
+
+        if ($v->fails()) Response::error(implode(', ', $v->errors()), 400);
+
+        AuthService::changePassword($auth, $payload);
+        Response::success('Password changed successfully');
+    }
+
+    public static function logout(): void {
+        $user = AuthMiddleware::handle();
+        AuthService::logout($user['user_id']);
+        Response::success('Logged out successfully');
     }
 }

@@ -1,0 +1,98 @@
+<?php
+require_once __DIR__ . '/../Config/database.php';
+require_once __DIR__ . '/../Helpers/Response.php';
+
+class StaffService {
+
+    public static function getAll($tenantId) {
+        $db   = getDB();
+        $stmt = $db->prepare("
+            SELECT s.id, u.name, u.email, s.user_id, u.role, s.specialization, s.status, s.created_at
+                    
+            FROM staff s
+            JOIN users u ON s.user_id = u.id
+            WHERE s.tenant_id = ?
+            ORDER BY s.id DESC
+        ");
+        $stmt->execute([$tenantId]);
+        return $stmt->fetchAll();
+    }
+
+    public static function getById($id, $tenantId) {
+        $db   = getDB();
+        $stmt = $db->prepare("
+            SELECT s.id, u.name, s.user_id, u.role, s.specialization, s.status, s.created_at
+                     
+            FROM staff s
+            JOIN users u ON s.user_id = u.id
+            WHERE s.id = ? AND s.tenant_id = ?
+        ");
+        $stmt->execute([$id, $tenantId]);
+        $staff = $stmt->fetch();
+        if (!$staff) Response::error('Staff not found', 404);
+        return $staff;
+    }
+
+    public static function create($data, $tenantId) {
+        $db = getDB();
+
+        // Check already exists
+        $stmt = $db->prepare("SELECT id FROM staff WHERE user_id = ? AND tenant_id = ?");
+        $stmt->execute([$data['user_id'], $tenantId]);
+        if ($stmt->fetch()) Response::error('Staff profile already exists for this user', 400);
+
+        $stmt = $db->prepare("
+            INSERT INTO staff (tenant_id, user_id, specialization, status)
+            VALUES (?, ?, ?, ?)
+        ");
+        $stmt->execute([
+            $tenantId,
+            $data['user_id'],
+            $data['specialization'] ?? null,
+             'active',
+        ]);
+
+        return self::getById((int) $db->lastInsertId(), $tenantId);
+    }
+
+    public static function update($id, $tenantId, $data) {
+        $db      = getDB();
+        $fields  = [];
+        $params  = [];
+        $allowed = ['specialization', 'status'];
+
+        foreach ($allowed as $col) {
+            if (array_key_exists($col, $data)) {
+                $fields[]      = "$col = ?";
+                $params[]      = $data[$col];
+            }
+        }
+
+        if (empty($fields)) Response::error('Nothing to update', 400);
+
+        $params[] = $id;
+        $params[] = $tenantId;
+
+        $stmt = $db->prepare("UPDATE staff SET " . implode(', ', $fields) . " WHERE id = ? AND tenant_id = ?");
+        $stmt->execute($params);
+
+        if ($stmt->rowCount() === 0) Response::error('Staff not found or nothing changed', 404);
+
+        // Sync status to users table
+        $stmt = $db->prepare("SELECT user_id, status FROM staff WHERE id = ? AND tenant_id = ?");
+        $stmt->execute([$id, $tenantId]);
+        $staff = $stmt->fetch();
+
+        $stmt = $db->prepare("UPDATE users SET status = ? WHERE id = ?");
+        $stmt->execute([$staff['status'], $staff['user_id']]);
+
+        return self::getById($id, $tenantId);
+    }
+
+    public static function delete($id, $tenantId) {
+        $db   = getDB();
+        $stmt = $db->prepare("DELETE FROM staff WHERE id = ? AND tenant_id = ?");
+        $stmt->execute([$id, $tenantId]);
+        if ($stmt->rowCount() === 0) Response::error('Staff not found', 404);
+    }
+}

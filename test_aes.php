@@ -3,7 +3,7 @@ require_once __DIR__ . '/app/Config/config.php';
 require_once __DIR__ . '/app/Security/AES.php';
 
 // ✅ Encrypt - use this to generate Postman body
-$data ="admin@test.com";
+$data ="1990-05-15";
 $encrypted = AES::encrypt($data);
 echo "=== ENCRYPT ===\n";
 echo "Postman Body:\n";
@@ -17,4 +17,4 @@ echo "=== DECRYPT ===\n";
 print_r($decrypted);
 echo "</br>";
 
-echo bin2hex(random_bytes(16)); 
+// echo bin2hex(random_bytes(16)); 

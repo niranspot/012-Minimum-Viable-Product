@@ -1,3 +1,5 @@
+## Niranjan
+
 # Dev-1 Contribution
 
 ## Project Structure & Configuration
@@ -32,6 +34,7 @@
 ### Entry Point
 16. `public/index.php` - Entry point, loads CSRF middleware, loads routes
 17. `public/.htaccess` - Rewrites all requests to index.php
+18. `public/billingController` - create,list,update
 
 ---
 
@@ -51,3 +54,172 @@
 * **Access Token** → Sent by client in `Authorization: Bearer <token>` header
 * **Refresh Token** → Stored in `users` table columns (`refresh_token`, `refresh_token_expires_at`)
 * **No separate refresh_tokens table** - Tokens stored directly on users table
+
+# Billing API
+
+Manages invoices and payment tracking per appointment.
+
+## Endpoints
+
+- POST   /billing          → Generate invoice
+- GET    /billing          → List all invoices
+- PUT    /billing/{id}     → Update payment status
+
+# Messages / Notes API
+
+Stores appointment-based notes between doctor and nurse.
+
+## Endpoints
+
+- POST   /messages                    → Send a note
+- GET    /messages/{appointment_id}   → Get all notes for an appointment
+
+# Change Password API
+
+Allows a logged in user to change their password.
+
+## Endpoint
+
+POST /change-password
+
+## Headers
+
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+## Body
+
+{
+    "email": "admin@test.com",
+    "old_password": "123456",
+    "new_password": "newpass123"
+}
+
+## Rules
+
+- User must be logged in (valid access token required)
+- Email must match the logged in user's email
+- Old password must be correct
+- New password minimum 6 characters
+
+## Responses
+
+200 - Password changed successfully
+400 - Validation error
+401 - Old password is incorrect
+403 - Email does not match logged in user
+404 - User not found
+
+---------------------------------------------------------------------------------------------------------------
+
+
+## Mithra
+
+## Dev-2 Contribution — Patient & Appointment Modules
+
+### New Files Added
+
+| File | Purpose |
+|------|---------|
+| `app/Repositories/PatientRepository.php` | Raw SQL for patients table (create, list, find, update, soft delete) |
+| `app/Repositories/AppointmentRepository.php` | Raw SQL for appointments table (create, list, find, update, date range) |
+| `app/Services/PatientService.php` | Business logic for patient CRUD (tenant validation, duplicate profile check) |
+| `app/Services/AppointmentService.php` | Business logic for appointments (conflict check, patient role auto-derive) |
+| `app/Controllers/PatientController.php` | HTTP layer for patient routes (reads input, validates, calls service) |
+| `app/Controllers/AppointmentController.php` | HTTP layer for appointment routes (reads input, validates, calls service) |
+
+### Modified Files
+
+| File | What Changed |
+|------|-------------|
+| `app/Routes/api.php` | Added `routeWithId()` for dynamic `{id}` routes, registered all 8 new endpoints, fixed `$basePath` |
+| `app/Middleware/CsrfMiddleware.php` | Added new routes to exclude list, fixed `$basePath`, added trailing `/id` strip logic |
+
+---
+
+### Endpoints Added
+
+#### Patient Management
+
+| Method | Endpoint | Roles | Description |
+|--------|----------|-------|-------------|
+| POST | `/patients` | Doctor, Nurse | Create patient profile linked to an existing user |
+| GET | `/patients` | Doctor, Nurse | List all non-deleted patients in the tenant |
+| PUT | `/patients/{id}` | Doctor, Nurse | Partial update — only sends fields change |
+| DELETE | `/patients/{id}` | Doctor, Nurse | Soft delete — sets `deleted_at`, record stays in DB |
+
+#### Appointment & Calendar
+
+| Method | Endpoint | Roles | Description |
+|--------|----------|-------|-------------|
+| POST | `/appointments` | Doctor, Nurse, Patient | Create appointment with conflict validation |
+| GET | `/appointments` | Doctor, Nurse, Patient | List appointments (patient sees only their own) |
+| PUT | `/appointments/{id}` | Doctor, Nurse | Update status, notes, or reschedule |
+| GET | `/calendar?from=&to=` | All roles | Fetch appointments by date range |
+
+---
+
+### Key Design Decisions
+
+**Tenant isolation** — every query filters by `tenant_id` from the JWT payload. No client input is trusted for tenant.
+
+**Soft delete** — `DELETE /patients/{id}` sets `deleted_at = NOW()`. Every SELECT and UPDATE filters `WHERE deleted_at IS NULL`, so deleted records are invisible without being removed from the DB.
+
+**Conflict validation** — `POST /appointments` checks for same `doctor_id + appointment_date + tenant_id` where status is not `cancelled` before inserting. Returns `409 Conflict` if a slot is taken.
+
+**Patient role auto-derive** — when a user with role `patient` creates an appointment, `patient_id` is looked up from the `patients` table using their `user_id` from the JWT. They cannot spoof another patient's ID.
+
+**Partial update** — `PUT /patients/{id}` uses `array_key_exists()` to merge incoming fields with existing data, so sending only `{"address": "Chennai"}` updates only address without nulling out other fields.
+
+**CSRF exclusion** — new API routes are JWT-protected (stateless), so they are excluded from session-based CSRF checks in `CsrfMiddleware`. Auth is handled entirely by `AuthMiddleware::handle()` + `allowRoles()`.
+
+
+------------------------------------------------------------------------------------------------------------------------
+
+
+## vasuki
+
+## Dev-3 STAFF & PRESCRIPTION API UPDATE
+================================
+## NEW FILES
+---------
+app/Controllers/StaffController.php
+app/Controllers/PrescriptionController.php
+app/Services/StaffService.php
+app/Services/PrescriptionService.php
+app/Routes/api.php (updated)
+
+## STAFF ENDPOINTS
+---------------
+GET /staff - list all staff
+GET /staff/:id - get one
+POST /staff - create { "user_id":2, "specialization":"Cardiology", "status":"active" }
+PUT /staff/:id - update { "specialization":"Neurology", "status":"inactive" }
+DELETE /staff/:id - delete
+
+
+## PRESCRIPTION ENDPOINTS
+----------------------
+GET /prescriptions - list all
+GET /prescriptions/:id - get one
+GET /patients/:id/prescriptions - by patient
+GET /appointments/:id/prescription - by appointment
+POST /prescriptions - create { "patient_id":1, "appointment_id":1, "medicines":"..." }
+PUT /prescriptions/:id - update { "medicines":"..." }
+PATCH /prescriptions/:id/status - { "status":"verified" }
+DELETE /prescriptions/:id - delete
+STATUS FLOW: created → verified → dispensed
+
+
+## ENCRYPTION
+----------
+medicines field in prescriptions table is AES encrypted on save, decrypted on read.
+AES_KEY must be set in .env
+
+## ROLE PERMISSIONS
+----------------
+Staff create/update/delete → admin only
+Staff read → admin, doctor, nurse
+Prescription create → doctor only
+Prescription status update → admin, doctor, pharmacist
+Prescription read → admin, doctor, pharmacist, nurse

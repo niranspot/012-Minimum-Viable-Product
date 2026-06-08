@@ -2,24 +2,20 @@
 require_once __DIR__ . '/../Config/config.php';
 
 class JWT {
-    public static function generateAccess(array $payload): string {
-        return self::generate($payload, JWT_ACCESS_EXPIRE);
+    public static function generateAccess($payload) {
+        return self::generate($payload);
     }
 
-    public static function generateRefresh(array $payload): string {
-        return self::generate($payload, JWT_REFRESH_EXPIRE);
-    }
-
-    private static function generate(array $payload, int $expire): string {
+    private static function generate($payload) {
         $header  = self::base64url(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
         $payload['iat'] = time();
-        $payload['exp'] = time() + $expire;
+        $payload['exp'] = time() + JWT_ACCESS_EXPIRE;
         $body    = self::base64url(json_encode($payload));
         $sig     = self::base64url(hash_hmac('sha256', "$header.$body", JWT_SECRET, true));
         return "$header.$body.$sig";
     }
 
-    public static function validate(string $token): array {
+    public static function validate($token) {
         $parts = explode('.', $token);
         if (count($parts) !== 3) return [];
 
@@ -34,7 +30,7 @@ class JWT {
         return $payload;
     }
 
-    private static function base64url(string $data): string {
+    private static function base64url($data) {
         return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
     }
 }

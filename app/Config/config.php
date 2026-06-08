@@ -35,12 +35,20 @@ define('DB_USER',   getenv('DB_USER'));
 define('DB_PASS',   getenv('DB_PASS'));
 
 // AES
-define('AES_KEY',   getenv('AES_KEY'));
+if (empty($_ENV['AES_KEY'])) {
+    http_response_code(500);
+    echo json_encode(["status" => false, "message" => "AES_KEY not configured."]);
+    exit;
+}
+define('AES_KEY', getenv('AES_KEY'));
 
 // JWT
-define('JWT_SECRET',          getenv('JWT_SECRET'));
-define('JWT_ACCESS_EXPIRE',   (int) getenv('JWT_ACCESS_EXPIRE'));
-define('JWT_REFRESH_EXPIRE',  (int) getenv('JWT_REFRESH_EXPIRE'));
+if (empty($_ENV['JWT_SECRET'])) {
+    http_response_code(500);
+    echo json_encode(["status" => false, "message" => "JWT_SECRET not configured."]);
+    exit;
+}
+define('JWT_SECRET', getenv('JWT_SECRET'));
 
-// CSRF
-define('CSRF_SECRET',  getenv('CSRF_SECRET'));
+define('JWT_ACCESS_EXPIRE',   getenv('JWT_ACCESS_EXPIRE'));
+define('JWT_REFRESH_EXPIRE',   getenv('JWT_REFRESH_EXPIRE'));
