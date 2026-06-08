@@ -1,4 +1,4 @@
---Niranjan
+## Niranjan
 
 # Dev-1 Contribution
 
@@ -34,6 +34,7 @@
 ### Entry Point
 16. `public/index.php` - Entry point, loads CSRF middleware, loads routes
 17. `public/.htaccess` - Rewrites all requests to index.php
+18. `public/billingController` - create,list,update
 
 ---
 
@@ -73,8 +74,46 @@ Stores appointment-based notes between doctor and nurse.
 - POST   /messages                    → Send a note
 - GET    /messages/{appointment_id}   → Get all notes for an appointment
 
+# Change Password API
 
----Mithra
+Allows a logged in user to change their password.
+
+## Endpoint
+
+POST /change-password
+
+## Headers
+
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+## Body
+
+{
+    "email": "admin@test.com",
+    "old_password": "123456",
+    "new_password": "newpass123"
+}
+
+## Rules
+
+- User must be logged in (valid access token required)
+- Email must match the logged in user's email
+- Old password must be correct
+- New password minimum 6 characters
+
+## Responses
+
+200 - Password changed successfully
+400 - Validation error
+401 - Old password is incorrect
+403 - Email does not match logged in user
+404 - User not found
+
+---------------------------------------------------------------------------------------------------------------
+
+
+## Mithra
 
 ## Dev-2 Contribution — Patient & Appointment Modules
 
@@ -135,8 +174,10 @@ Stores appointment-based notes between doctor and nurse.
 **CSRF exclusion** — new API routes are JWT-protected (stateless), so they are excluded from session-based CSRF checks in `CsrfMiddleware`. Auth is handled entirely by `AuthMiddleware::handle()` + `allowRoles()`.
 
 
+------------------------------------------------------------------------------------------------------------------------
 
---vasuki
+
+## vasuki
 
 ## Dev-3 STAFF & PRESCRIPTION API UPDATE
 ================================
