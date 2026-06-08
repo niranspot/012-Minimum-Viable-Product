@@ -13,9 +13,9 @@ class CsrfMiddleware {
         // Patient routes — protected by JWT (AuthMiddleware), not session CSRF-Mithra
         // '/patients',
         // Appointment routes — protected by JWT-Mithra
-        '/appointments',
+        // '/appointments',
         // Calendar — GET, so skipped anyway, but listed for clarity-Mithra
-        '/calendar',
+        // '/calendar',
     ];
 
     public static function handle() {
