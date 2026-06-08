@@ -4,6 +4,9 @@ require_once __DIR__ . '/../Controllers/StaffController.php';
 require_once __DIR__ . '/../Controllers/PrescriptionController.php';
 require_once __DIR__ . '/../Controllers/BillingController.php';
 require_once __DIR__ . '/../Controllers/MessageController.php';
+require_once __DIR__ . '/../Controllers/MessageController.php';
+require_once __DIR__ . '/../Controllers/PatientController.php';
+require_once __DIR__ . '/../Controllers/AppointmentController.php';
 
 // ─── Static route matcher (your original) ────────────────────────────────────
 function route($method, $uri, $handler) {
