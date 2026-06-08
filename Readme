@@ -54,8 +54,91 @@
 * **Refresh Token** → Stored in `users` table columns (`refresh_token`, `refresh_token_expires_at`)
 * **No separate refresh_tokens table** - Tokens stored directly on users table
 
+# Billing API
 
-STAFF & PRESCRIPTION API UPDATE
+Manages invoices and payment tracking per appointment.
+
+## Endpoints
+
+- POST   /billing          → Generate invoice
+- GET    /billing          → List all invoices
+- PUT    /billing/{id}     → Update payment status
+
+# Messages / Notes API
+
+Stores appointment-based notes between doctor and nurse.
+
+## Endpoints
+
+- POST   /messages                    → Send a note
+- GET    /messages/{appointment_id}   → Get all notes for an appointment
+
+
+---Mithra
+
+## Dev-2 Contribution — Patient & Appointment Modules
+
+### New Files Added
+
+| File | Purpose |
+|------|---------|
+| `app/Repositories/PatientRepository.php` | Raw SQL for patients table (create, list, find, update, soft delete) |
+| `app/Repositories/AppointmentRepository.php` | Raw SQL for appointments table (create, list, find, update, date range) |
+| `app/Services/PatientService.php` | Business logic for patient CRUD (tenant validation, duplicate profile check) |
+| `app/Services/AppointmentService.php` | Business logic for appointments (conflict check, patient role auto-derive) |
+| `app/Controllers/PatientController.php` | HTTP layer for patient routes (reads input, validates, calls service) |
+| `app/Controllers/AppointmentController.php` | HTTP layer for appointment routes (reads input, validates, calls service) |
+
+### Modified Files
+
+| File | What Changed |
+|------|-------------|
+| `app/Routes/api.php` | Added `routeWithId()` for dynamic `{id}` routes, registered all 8 new endpoints, fixed `$basePath` |
+| `app/Middleware/CsrfMiddleware.php` | Added new routes to exclude list, fixed `$basePath`, added trailing `/id` strip logic |
+
+---
+
+### Endpoints Added
+
+#### Patient Management
+
+| Method | Endpoint | Roles | Description |
+|--------|----------|-------|-------------|
+| POST | `/patients` | Doctor, Nurse | Create patient profile linked to an existing user |
+| GET | `/patients` | Doctor, Nurse | List all non-deleted patients in the tenant |
+| PUT | `/patients/{id}` | Doctor, Nurse | Partial update — only sends fields change |
+| DELETE | `/patients/{id}` | Doctor, Nurse | Soft delete — sets `deleted_at`, record stays in DB |
+
+#### Appointment & Calendar
+
+| Method | Endpoint | Roles | Description |
+|--------|----------|-------|-------------|
+| POST | `/appointments` | Doctor, Nurse, Patient | Create appointment with conflict validation |
+| GET | `/appointments` | Doctor, Nurse, Patient | List appointments (patient sees only their own) |
+| PUT | `/appointments/{id}` | Doctor, Nurse | Update status, notes, or reschedule |
+| GET | `/calendar?from=&to=` | All roles | Fetch appointments by date range |
+
+---
+
+### Key Design Decisions
+
+**Tenant isolation** — every query filters by `tenant_id` from the JWT payload. No client input is trusted for tenant.
+
+**Soft delete** — `DELETE /patients/{id}` sets `deleted_at = NOW()`. Every SELECT and UPDATE filters `WHERE deleted_at IS NULL`, so deleted records are invisible without being removed from the DB.
+
+**Conflict validation** — `POST /appointments` checks for same `doctor_id + appointment_date + tenant_id` where status is not `cancelled` before inserting. Returns `409 Conflict` if a slot is taken.
+
+**Patient role auto-derive** — when a user with role `patient` creates an appointment, `patient_id` is looked up from the `patients` table using their `user_id` from the JWT. They cannot spoof another patient's ID.
+
+**Partial update** — `PUT /patients/{id}` uses `array_key_exists()` to merge incoming fields with existing data, so sending only `{"address": "Chennai"}` updates only address without nulling out other fields.
+
+**CSRF exclusion** — new API routes are JWT-protected (stateless), so they are excluded from session-based CSRF checks in `CsrfMiddleware`. Auth is handled entirely by `AuthMiddleware::handle()` + `allowRoles()`.
+
+
+
+--vasuki
+
+## Dev-3 STAFF & PRESCRIPTION API UPDATE
 ================================
 
 NEW FILES

@@ -43,6 +43,24 @@ function routeMatch($method, $pattern, $handler) {
     }
 }
 
+// routeWithId() — matches /segment/{id} and passes id to handler-Mithra
+function routeWithId($method, $prefix, $handler) {
+    $requestMethod = $_SERVER['REQUEST_METHOD'];
+    $requestUri    = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+
+    $basePath   = '/MVP/public';
+    $requestUri = str_replace($basePath, '', $requestUri);
+    $requestUri = '/' . trim($requestUri, '/');
+
+    if ($requestMethod !== strtoupper($method)) return;
+
+    $pattern = '#^' . preg_quote($prefix, '#') . '/(\d+)$#';
+    if (preg_match($pattern, $requestUri, $matches)) {
+        $handler((int) $matches[1]);
+        exit;
+    }
+}
+
 
 //------------------------------------------------------------------------------------------------------
 //EndPoints
@@ -107,6 +125,6 @@ routeMatch('PUT', '/prescriptions/:id', [PrescriptionController::class, 'update'
 routeMatch('PATCH', '/prescriptions/:id/status', [PrescriptionController::class, 'updateStatus']);
 routeMatch('DELETE', '/prescriptions/:id', [PrescriptionController::class, 'destroy']);
 routeMatch('GET', '/patients/:id/prescriptions', [PrescriptionController::class, 'byPatient']);
-routeMatch('GET', '/appointments/:id/prescription', [PrescriptionController::class, 'byAppointment']);
+routeMatch('GET', '/appointments/:id/prescriptions', [PrescriptionController::class, 'byAppointment']);
 
 
