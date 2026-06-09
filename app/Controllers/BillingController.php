@@ -8,6 +8,8 @@ class BillingController {
 
     public static function create() {
         $auth = AuthMiddleware::handle();
+
+        // Only admin and doctor can create bills
         AuthMiddleware::allowRoles($auth, ['admin', 'doctor']);
 
         $payload = json_decode(file_get_contents('php://input'), true);
@@ -27,6 +29,21 @@ class BillingController {
         $auth = AuthMiddleware::handle();
         AuthMiddleware::allowRoles($auth, ['admin', 'doctor', 'patient']);
 
+        // If patient, only show their bills
+        if ($auth['role'] === 'patient') {
+            $db   = getDB();
+            $stmt = $db->prepare("SELECT id FROM patients WHERE user_id = ? AND tenant_id = ?");
+            $stmt->execute([$auth['user_id'], (int) $auth['tenant_id']]);
+            $patient = $stmt->fetch();
+
+            if (!$patient) Response::error('Patient record not found', 404);
+
+            $bills = BillingService::getByPatient($patient['id'], (int) $auth['tenant_id']);
+            Response::success('Billing list fetched', $bills);
+        }
+
+        // If admin or doctor, show all bills for the tenant
+
         $bills = BillingService::getAll((int) $auth['tenant_id']);
         Response::success('Billing list fetched', $bills);
     }
@@ -37,6 +54,7 @@ class BillingController {
 
         $payload = json_decode(file_get_contents('php://input'), true);
 
+        // Only allow updating the status for now
         if (empty($payload['status'])) Response::error('Status is required', 400);
         if (!in_array($payload['status'], BILLING_STATUS)) {
             Response::error('Status must be: pending or paid', 400);

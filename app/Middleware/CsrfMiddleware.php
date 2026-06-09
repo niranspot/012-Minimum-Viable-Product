@@ -7,7 +7,6 @@ class CsrfMiddleware {
         // Auth routes — no CSRF needed since they use JWT, not sessions-Niranjan
         '/register',
         '/login',
-        '/csrf-token',
         '/refresh-token',
 
         // Patient routes — protected by JWT (AuthMiddleware), not session CSRF-Mithra
