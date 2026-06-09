@@ -24,7 +24,7 @@ class CsrfMiddleware {
         // CSRF only matters for state-changing methods
         if (!in_array($method, ['POST', 'PUT', 'DELETE'])) return;
 
-        $basePath   = '/newphp1/Php_Tasks/012MinimumViableProduct/public';
+        $basePath   = '/MVP/public';
         $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
         $requestUri = '/' . trim(str_replace($basePath, '', $requestUri), '/');
 
