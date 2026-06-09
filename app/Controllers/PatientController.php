@@ -39,6 +39,15 @@ class PatientController {
         Response::success('Patients fetched', $patients);
     }
 
+    // GET /patients/{id}
+    public static function show($id) {
+    $authUser = AuthMiddleware::handle();
+    AuthMiddleware::allowRoles($authUser, ['doctor', 'nurse']);
+
+    $patient = PatientService::getById($id, $authUser['tenant_id']);
+    Response::success('Patient fetched', $patient);
+    }
+
     // PUT /patients/{id}
     public static function update($id) {
         $authUser = AuthMiddleware::handle();
