@@ -80,7 +80,6 @@ function routeMatch($method, $pattern, $handler) {
 route('POST', '/register',      [AuthController::class, 'register']);
 route('POST', '/login',         [AuthController::class, 'login']);
 route('POST', '/refresh-token', [AuthController::class, 'refresh']);
-// route('GET',  '/csrf-token',    [AuthController::class, 'csrfToken']);
 route('POST', '/change-password', [AuthController::class, 'changePassword']);
 route('POST', '/logout', [AuthController::class, 'logout']);
 

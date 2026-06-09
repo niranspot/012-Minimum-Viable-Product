@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../Config/database.php';
 require_once __DIR__ . '/../Helpers/Response.php';
+require_once __DIR__ . '/../Security/AES.php';
 
 class StaffService {
 
@@ -15,7 +16,11 @@ class StaffService {
             ORDER BY s.id DESC
         ");
         $stmt->execute([$tenantId]);
-        return $stmt->fetchAll();
+        $staff= $stmt->fetchAll();
+        return array_map(function($s) {
+            $s['specialization'] = AES::decrypt($s['specialization']);
+            return $s;
+        }, $staff);
     }
 
     public static function getById($id, $tenantId) {
@@ -29,6 +34,7 @@ class StaffService {
         ");
         $stmt->execute([$id, $tenantId]);
         $staff = $stmt->fetch();
+        $staff['specialization'] = AES::decrypt($staff['specialization']);
         if (!$staff) Response::error('Staff not found', 404);
         return $staff;
     }
@@ -41,6 +47,15 @@ class StaffService {
         $stmt->execute([$data['user_id'], $tenantId]);
         if ($stmt->fetch()) Response::error('Staff profile already exists for this user', 400);
 
+        // Validate user exists and is not a patient
+        $stmt = $db->prepare("SELECT role FROM users WHERE id = ? AND tenant_id = ?");
+        $stmt->execute([$data['user_id'], $tenantId]);
+        $user = $stmt->fetch();
+
+        if (!$user) Response::error('User not found', 404);
+        if ($user['role'] === 'patient') Response::error('Cannot create staff profile for a patient user', 400);
+
+        // Insert staff record
         $stmt = $db->prepare("
             INSERT INTO staff (tenant_id, user_id, specialization, status)
             VALUES (?, ?, ?, ?)
@@ -48,8 +63,8 @@ class StaffService {
         $stmt->execute([
             $tenantId,
             $data['user_id'],
-            $data['specialization'] ?? null,
-             'active',
+            AES::encrypt($data['specialization'] ?? null),
+            'active',
         ]);
 
         return self::getById((int) $db->lastInsertId(), $tenantId);

@@ -32,7 +32,6 @@ class AuthController {
 
     public static function login(){
         $payload    = json_decode(file_get_contents('php://input'), true);
-        // $payload = AES::decrypt($body['payload'] ?? '');
 
         $v = new Validator($payload);
         $v->required('email')->email('email')
@@ -43,6 +42,7 @@ class AuthController {
         }
 
         $result = AuthService::login($payload);
+        // Generate a new CSRF token on login and include it in the response. The frontend can store this and send it in the X-CSRF-Token header for subsequent requests.
         $token = CSRF::generate();
         $result['csrf_token'] = $token;
         Response::success('Login successful', $result);
@@ -51,8 +51,6 @@ class AuthController {
 
     public static function refresh(): void {
         $result = AuthService::refresh();
-        $token = CSRF::generate();
-        $result['csrf_token'] = $token;
         Response::success('Token refreshed', $result);
     }
 
@@ -64,8 +62,12 @@ class AuthController {
         $v->required('email')->email('email')
         ->required('old_password')
         ->required('new_password')->min('new_password', 6);
-
         if ($v->fails()) Response::error(implode(', ', $v->errors()), 400);
+
+
+        if ($payload['old_password'] === $payload['new_password']) {
+            Response::error('New password cannot be the same as old password', 400);
+        }
 
         AuthService::changePassword($auth, $payload);
         Response::success('Password changed successfully');
