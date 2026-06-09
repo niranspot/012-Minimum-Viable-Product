@@ -150,8 +150,10 @@ class AppointmentService {
     // ---------------------------------------------------------------
     // PUT /appointments/{id} — Update appointment
     // ---------------------------------------------------------------
-    public static function update(int $id, array $data, int $tenantId): array {
-        $db = getDB();
+    public static function update(int $id, array $data, array $authUser): array {
+        $db       = getDB();
+        $tenantId = (int) $authUser['tenant_id'];
+        $role     = $authUser['role'];
 
         // Fetch current appointment
         $stmt = $db->prepare(
@@ -164,8 +166,27 @@ class AppointmentService {
             Response::error('Appointment not found', 404);
         }
 
+        // ── Patient-role guard ────────────────────────────────────────
+        if ($role === 'patient') {
+            // 1. Patient can only cancel — no rescheduling, no status changes to
+            //    confirmed/completed/pending
+            if ($data['status'] !== 'cancelled') {
+                Response::error('Patients can only cancel their own appointments', 403);
+            }
+
+            // 2. Verify this appointment belongs to the logged-in patient's profile
+            $patientId = self::resolvePatientId((int) $authUser['user_id'], $tenantId);
+            if ((int) $appointment['patient_id'] !== $patientId) {
+                Response::error('You can only cancel your own appointments', 403);
+            }
+        }
+        
         if ($appointment['status'] === 'completed') {
             Response::error('Cannot modify a completed appointment', 400);
+        }
+
+        if ($appointment['status'] === 'cancelled') {
+            Response::error('Cannot modify an already cancelled appointment', 400);
         }
 
         if (!in_array($data['status'], APPOINTMENT_STATUS)) {
@@ -176,7 +197,7 @@ class AppointmentService {
             $data['appointment_date'] ?? $appointment['appointment_date']
         ));
 
-        // Merge notes: use incoming if provided, else keep existing (decrypted)
+        // Merge notes: use incoming if provided, else keep existing encrypted value
         $newNotes = array_key_exists('notes', $data)
             ? $data['notes']
             : AES::decrypt($appointment['notes'] ?? '');
@@ -200,6 +221,7 @@ class AppointmentService {
 
         return ['appointment_id' => $id];
     }
+
 
     // ---------------------------------------------------------------
     // GET /calendar — Fetch by date range

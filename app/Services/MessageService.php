@@ -16,7 +16,16 @@ class MessageService {
             ORDER BY m.created_at ASC
         ");
         $stmt->execute([$appointmentId, $tenantId]);
-        return $stmt->fetchAll();
+        $data= $stmt->fetchAll();
+        return array_map(fn($d) => [
+            'id' => (int) $d['id'],
+            'appointment_id' => (int) $d['appointment_id'],
+            'sender_id' => (int) $d['sender_id'],
+            'sender_name' => $d['sender_name'],
+            'sender_role' => $d['sender_role'],
+            'message' => AES::decrypt($d['message']),
+            'created_at' => $d['created_at']
+        ], $data);
     }
 
     public static function create($data, $tenantId, $senderId) {
@@ -35,7 +44,7 @@ class MessageService {
             $tenantId,
             $data['appointment_id'],
             $senderId,
-            $data['message'],
+            AES::encrypt($data['message'])
         ]);
 
         return ['message_id' => (int) $db->lastInsertId()];

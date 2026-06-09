@@ -35,7 +35,7 @@ class DashboardController {
     // GET /dashboard/tenant-analytics  (Admin only)
     public static function tenantAnalytics() {
         $auth = AuthMiddleware::handle();
-        AuthMiddleware::allowRoles($auth, ['admin', 'doctor']);
+        AuthMiddleware::allowRoles($auth, ['admin']);
 
         $data = DashboardService::tenantAnalytics();
         Response::success('Tenant analytics fetched', $data);
