@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../Config/database.php';
 require_once __DIR__ . '/../Helpers/Response.php';
+require_once __DIR__ . '/../Security/AES.php';
 
 class StaffService {
 
@@ -15,7 +16,11 @@ class StaffService {
             ORDER BY s.id DESC
         ");
         $stmt->execute([$tenantId]);
-        return $stmt->fetchAll();
+        $staff= $stmt->fetchAll();
+        return array_map(function($s) {
+            $s['specialization'] = AES::decrypt($s['specialization']);
+            return $s;
+        }, $staff);
     }
 
     public static function getById($id, $tenantId) {
@@ -29,6 +34,7 @@ class StaffService {
         ");
         $stmt->execute([$id, $tenantId]);
         $staff = $stmt->fetch();
+        $staff['specialization'] = AES::decrypt($staff['specialization']);
         if (!$staff) Response::error('Staff not found', 404);
         return $staff;
     }
@@ -57,8 +63,8 @@ class StaffService {
         $stmt->execute([
             $tenantId,
             $data['user_id'],
-            $data['specialization'] ?? null,
-             'active',
+            AES::encrypt($data['specialization'] ?? null),
+            'active',
         ]);
 
         return self::getById((int) $db->lastInsertId(), $tenantId);
