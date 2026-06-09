@@ -98,6 +98,28 @@ class PatientService {
         return self::decryptRows($stmt->fetchAll());
     }
 
+    // GET /patients/{id} — Fetch single patient
+    public static function getById(int $id, int $tenantId): array {
+    $db = getDB();
+
+    $stmt = $db->prepare(
+        "SELECT p.id, p.user_id, p.blood_group, p.dob, p.gender, p.address,
+                p.emergency_contact, p.created_at,
+                u.name, u.email
+         FROM patients p
+         JOIN users u ON u.id = p.user_id
+         WHERE p.id = ? AND p.tenant_id = ? AND p.deleted_at IS NULL"
+    );
+    $stmt->execute([$id, $tenantId]);
+    $patient = $stmt->fetch();
+
+    if (!$patient) {
+        Response::error('Patient not found', 404);
+    }
+
+    return self::decryptRow($patient);
+    }
+
     // ---------------------------------------------------------------
     // PUT /patients/{id} — Update patient
     // ---------------------------------------------------------------
