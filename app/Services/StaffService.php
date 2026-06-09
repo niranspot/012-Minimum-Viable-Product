@@ -4,18 +4,12 @@ require_once __DIR__ . '/../Helpers/Response.php';
 require_once __DIR__ . '/../Security/AES.php';
 
 class StaffService {
-    private PDO $db;
 
-    public function __construct() {
-        $this->db = getDB();
-    }
-
-    // ─── Private DB methods ──────────────────────────────────────────
-
-    private function findAll(int $tenantId): array {
-        $stmt = $this->db->prepare("
-            SELECT s.id, s.user_id, s.specialization, s.status, s.created_at,
-                   u.name, u.email, u.role
+    public static function getAll($tenantId) {
+        $db   = getDB();
+        $stmt = $db->prepare("
+            SELECT s.id, u.name, u.email, s.user_id, u.role, s.specialization, s.status, s.created_at
+                    
             FROM staff s
             JOIN users u ON s.user_id = u.id
             WHERE s.tenant_id = ?
@@ -29,10 +23,11 @@ class StaffService {
         }, $staff);
     }
 
-    private function findById(int $id, int $tenantId): array|false {
-        $stmt = $this->db->prepare("
-            SELECT s.id, s.user_id, s.specialization, s.status, s.created_at,
-                   u.name, u.email, u.role
+    public static function getById($id, $tenantId) {
+        $db   = getDB();
+        $stmt = $db->prepare("
+            SELECT s.id, u.name, s.user_id, u.role, s.specialization, s.status, s.created_at
+                     
             FROM staff s
             JOIN users u ON s.user_id = u.id
             WHERE s.id = ? AND s.tenant_id = ?
@@ -63,7 +58,7 @@ class StaffService {
         // Insert staff record
         $stmt = $db->prepare("
             INSERT INTO staff (tenant_id, user_id, specialization, status)
-            VALUES (:tenant_id, :user_id, :specialization, :status)
+            VALUES (?, ?, ?, ?)
         ");
         $stmt->execute([
             $tenantId,
@@ -71,71 +66,48 @@ class StaffService {
             AES::encrypt($data['specialization'] ?? null),
             'active',
         ]);
-        return (int) $this->db->lastInsertId();
+
+        return self::getById((int) $db->lastInsertId(), $tenantId);
     }
 
-    private function updateRecord(int $id, int $tenantId, array $data): bool {
-        $fields = [];
-        $params = [];
+    public static function update($id, $tenantId, $data) {
+        $db      = getDB();
+        $fields  = [];
+        $params  = [];
         $allowed = ['specialization', 'status'];
 
         foreach ($allowed as $col) {
             if (array_key_exists($col, $data)) {
-                $fields[]      = "$col = :$col";
-                $params[":$col"] = $data[$col];
+                $fields[]      = "$col = ?";
+                $params[]      = $data[$col];
             }
         }
 
-        if (empty($fields)) return false;
+        if (empty($fields)) Response::error('Nothing to update', 400);
 
-        $params[':id']        = $id;
-        $params[':tenant_id'] = $tenantId;
+        $params[] = $id;
+        $params[] = $tenantId;
 
-        $stmt = $this->db->prepare(
-            "UPDATE staff SET " . implode(', ', $fields) . " WHERE id = :id AND tenant_id = :tenant_id"
-        );
+        $stmt = $db->prepare("UPDATE staff SET " . implode(', ', $fields) . " WHERE id = ? AND tenant_id = ?");
         $stmt->execute($params);
-        return $stmt->rowCount() > 0;
-    }
 
-    private function deleteRecord(int $id, int $tenantId): bool {
-        $stmt = $this->db->prepare("DELETE FROM staff WHERE id = ? AND tenant_id = ?");
+        if ($stmt->rowCount() === 0) Response::error('Staff not found or nothing changed', 404);
+
+        // Sync status to users table
+        $stmt = $db->prepare("SELECT user_id, status FROM staff WHERE id = ? AND tenant_id = ?");
         $stmt->execute([$id, $tenantId]);
-        return $stmt->rowCount() > 0;
-    }
+        $staff = $stmt->fetch();
 
-    // ─── Public service methods (called by Controller) ───────────────
+        $stmt = $db->prepare("UPDATE users SET status = ? WHERE id = ?");
+        $stmt->execute([$staff['status'], $staff['user_id']]);
 
-    public static function getAll(int $tenantId): array {
-        return (new self())->findAll($tenantId);
-    }
-
-    public static function getById(int $id, int $tenantId): array {
-        $staff = (new self())->findById($id, $tenantId);
-        if (!$staff) Response::error('Staff not found', 404);
-        return $staff;
-    }
-
-    public static function create(array $data, int $tenantId): array {
-        $self = new self();
-
-        // Validate the user_id belongs to tenant and has a staff role
-        $existing = $self->findByUserId($data['user_id'], $tenantId);
-        if ($existing) Response::error('Staff profile already exists for this user', 400);
-
-        $data['tenant_id'] = $tenantId;
-        $id = $self->createRecord($data);
         return self::getById($id, $tenantId);
     }
 
-    public static function update(int $id, int $tenantId, array $data): array {
-        $updated = (new self())->updateRecord($id, $tenantId, $data);
-        if (!$updated) Response::error('Staff not found or nothing changed', 404);
-        return self::getById($id, $tenantId);
-    }
-
-    public static function delete(int $id, int $tenantId): void {
-        $deleted = (new self())->deleteRecord($id, $tenantId);
-        if (!$deleted) Response::error('Staff not found', 404);
+    public static function delete($id, $tenantId) {
+        $db   = getDB();
+        $stmt = $db->prepare("DELETE FROM staff WHERE id = ? AND tenant_id = ?");
+        $stmt->execute([$id, $tenantId]);
+        if ($stmt->rowCount() === 0) Response::error('Staff not found', 404);
     }
 }

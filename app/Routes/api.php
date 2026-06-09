@@ -95,6 +95,7 @@ routeWithId('GET', '/messages',     [MessageController::class, 'list']);
 // Patient routes  (doctor, nurse only — enforced inside controller)
 route('POST', '/patients',      [PatientController::class, 'create']);
 route('GET',  '/patients',      [PatientController::class, 'list']);
+routeWithId('GET', '/patients', [PatientController::class, 'show']);
 routeWithId('PUT',    '/patients', [PatientController::class, 'update']);
 routeWithId('DELETE', '/patients', [PatientController::class, 'delete']);
 
