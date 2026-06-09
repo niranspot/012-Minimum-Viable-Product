@@ -41,6 +41,15 @@ class StaffService {
         $stmt->execute([$data['user_id'], $tenantId]);
         if ($stmt->fetch()) Response::error('Staff profile already exists for this user', 400);
 
+        // Validate user exists and is not a patient
+        $stmt = $db->prepare("SELECT role FROM users WHERE id = ? AND tenant_id = ?");
+        $stmt->execute([$data['user_id'], $tenantId]);
+        $user = $stmt->fetch();
+
+        if (!$user) Response::error('User not found', 404);
+        if ($user['role'] === 'patient') Response::error('Cannot create staff profile for a patient user', 400);
+
+        // Insert staff record
         $stmt = $db->prepare("
             INSERT INTO staff (tenant_id, user_id, specialization, status)
             VALUES (?, ?, ?, ?)
