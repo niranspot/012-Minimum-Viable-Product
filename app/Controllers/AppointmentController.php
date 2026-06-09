@@ -42,19 +42,24 @@ class AppointmentController {
     // PUT /appointments/{id}
     public static function update(int $id): void {
         $authUser = AuthMiddleware::handle();
-        AuthMiddleware::allowRoles($authUser, ['doctor', 'nurse']);
+        AuthMiddleware::allowRoles($authUser, ['doctor', 'nurse', 'patient']);
 
         $payload = json_decode(file_get_contents('php://input'), true);
 
         $v = new Validator($payload);
-        $v->required('status')
-          ->required('appointment_date');
+        $v->required('status');
+
+        // Doctor/nurse must supply appointment_date (they can reschedule).
+        // Patient only cancels — appointment_date is not required for them.
+        if ($authUser['role'] !== 'patient') {
+            $v->required('appointment_date');
+        }
 
         if ($v->fails()) {
             Response::error(implode(', ', $v->errors()), 400);
         }
 
-        $result = AppointmentService::update($id, $payload, (int) $authUser['tenant_id']);
+        $result = AppointmentService::update($id, $payload, $authUser);
         Response::success('Appointment updated', $result);
     }
 

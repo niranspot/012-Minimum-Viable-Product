@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../Config/database.php';
 require_once __DIR__ . '/../Helpers/Response.php';
+require_once __DIR__ . '/../Security/AES.php';
 
 class StaffService {
     private PDO $db;
@@ -21,7 +22,11 @@ class StaffService {
             ORDER BY s.id DESC
         ");
         $stmt->execute([$tenantId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $staff= $stmt->fetchAll();
+        return array_map(function($s) {
+            $s['specialization'] = AES::decrypt($s['specialization']);
+            return $s;
+        }, $staff);
     }
 
     private function findById(int $id, int $tenantId): array|false {
@@ -33,27 +38,38 @@ class StaffService {
             WHERE s.id = ? AND s.tenant_id = ?
         ");
         $stmt->execute([$id, $tenantId]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $staff = $stmt->fetch();
+        $staff['specialization'] = AES::decrypt($staff['specialization']);
+        if (!$staff) Response::error('Staff not found', 404);
+        return $staff;
     }
 
-    private function findByUserId(int $userId, int $tenantId): array|false {
-        $stmt = $this->db->prepare("
-            SELECT id FROM staff WHERE user_id = ? AND tenant_id = ?
-        ");
-        $stmt->execute([$userId, $tenantId]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
+    public static function create($data, $tenantId) {
+        $db = getDB();
 
-    private function createRecord(array $data): int {
-        $stmt = $this->db->prepare("
+        // Check already exists
+        $stmt = $db->prepare("SELECT id FROM staff WHERE user_id = ? AND tenant_id = ?");
+        $stmt->execute([$data['user_id'], $tenantId]);
+        if ($stmt->fetch()) Response::error('Staff profile already exists for this user', 400);
+
+        // Validate user exists and is not a patient
+        $stmt = $db->prepare("SELECT role FROM users WHERE id = ? AND tenant_id = ?");
+        $stmt->execute([$data['user_id'], $tenantId]);
+        $user = $stmt->fetch();
+
+        if (!$user) Response::error('User not found', 404);
+        if ($user['role'] === 'patient') Response::error('Cannot create staff profile for a patient user', 400);
+
+        // Insert staff record
+        $stmt = $db->prepare("
             INSERT INTO staff (tenant_id, user_id, specialization, status)
             VALUES (:tenant_id, :user_id, :specialization, :status)
         ");
         $stmt->execute([
-            ':tenant_id'      => $data['tenant_id'],
-            ':user_id'        => $data['user_id'],
-            ':specialization' => $data['specialization'] ?? null,
-            ':status'         => $data['status']         ?? 'active',
+            $tenantId,
+            $data['user_id'],
+            AES::encrypt($data['specialization'] ?? null),
+            'active',
         ]);
         return (int) $this->db->lastInsertId();
     }

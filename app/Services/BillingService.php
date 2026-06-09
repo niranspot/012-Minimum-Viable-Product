@@ -5,11 +5,16 @@ require_once __DIR__ . '/../Helpers/Response.php';
 class BillingService {
 
     public static function getAll($tenantId) {
+        // For simplicity, we join with patients and appointments to get more useful info in one query.
         $db   = getDB();
         $stmt = $db->prepare("
-            SELECT b.*, 
-                   u.name AS patient_name,
-                   a.appointment_date
+            SELECT  u.name AS patient_name,
+                    b.id AS billing_id,
+                    b.patient_id,
+                    b.appointment_id,
+                    b.amount,
+                    b.status,
+                    a.appointment_date
             FROM billing b
             JOIN patients p ON b.patient_id = p.id
             JOIN users u ON p.user_id = u.id
@@ -22,6 +27,7 @@ class BillingService {
     }
 
     public static function getById($id, $tenantId) {
+        
         $db   = getDB();
         $stmt = $db->prepare("
             SELECT b.*,
@@ -38,6 +44,27 @@ class BillingService {
         if (!$row) Response::error('Billing not found', 404);
         return $row;
     }
+    
+    public static function getByPatient($patientId, $tenantId) {
+    $db   = getDB();
+    $stmt = $db->prepare("
+        SELECT u.name AS patient_name,
+               b.id AS billing_id,
+               b.patient_id,
+               b.appointment_id,
+               b.amount,
+               b.status, 
+               a.appointment_date
+        FROM billing b
+        JOIN patients p ON b.patient_id = p.id
+        JOIN users u ON p.user_id = u.id
+        JOIN appointments a ON b.appointment_id = a.id
+        WHERE b.tenant_id = ? AND b.patient_id = ?
+        ORDER BY b.id DESC
+    ");
+    $stmt->execute([$tenantId, $patientId]);
+    return $stmt->fetchAll();
+}
 
     public static function create($data, $tenantId) {
         $db = getDB();
