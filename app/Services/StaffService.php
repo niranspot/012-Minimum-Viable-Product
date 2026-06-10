@@ -25,6 +25,9 @@ class StaffService {
 
     public static function getById($id, $tenantId) {
         $db   = getDB();
+        $stmt = $db->prepare("select id from staff where id = ? and tenant_id = ?");
+        $stmt->execute([$id, $tenantId]);
+        if (!$stmt->fetch()) Response::error('Staff not found', 404);
         $stmt = $db->prepare("
             SELECT s.id, u.name, s.user_id, u.role, s.specialization, s.status, s.created_at
                      
@@ -78,8 +81,8 @@ class StaffService {
 
         foreach ($allowed as $col) {
             if (array_key_exists($col, $data)) {
-                $fields[]      = "$col = ?";
-                $params[]      = $data[$col];
+                $fields[] = "$col = ?";
+                $params[] = $col === 'specialization' ? AES::encrypt($data[$col]) : $data[$col];
             }
         }
 
