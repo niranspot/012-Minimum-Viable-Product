@@ -24,7 +24,7 @@ class StaffController {
     // POST /staff
     public static function store() {
         $auth = AuthMiddleware::handle();
-        AuthMiddleware::allowRoles($auth, ['admin','doctor']);
+        AuthMiddleware::allowRoles($auth, ['admin']);
         $payload = json_decode(file_get_contents('php://input'), true);
         $v = new Validator($payload);
         $v->required('user_id');
@@ -38,7 +38,7 @@ class StaffController {
     // PUT /staff/{id}
     public static function update($id) {
         $auth = AuthMiddleware::handle();
-        AuthMiddleware::allowRoles($auth, ['admin','doctor']);
+        AuthMiddleware::allowRoles($auth, ['admin']);
         $payload = json_decode(file_get_contents('php://input'), true);
         if (empty($payload)) {
             Response::error('No data provided', 400);
