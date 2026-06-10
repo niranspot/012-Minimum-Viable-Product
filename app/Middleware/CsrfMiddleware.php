@@ -29,9 +29,9 @@ class CsrfMiddleware {
 
 
         // Strip trailing /123 from dynamic routes like /patients/5-Mithra
-        $baseSegment = preg_replace('#/\d+$#', '', $requestUri);
+        // $baseSegment = preg_replace('#/\d+$#', '', $requestUri);
 
-        if (in_array($requestUri, self::$exclude) || in_array($baseSegment, self::$exclude)) return;
+        if (in_array($requestUri, self::$exclude) ) return;
 
         if (!CSRF::validate()) {
             Response::error('Invalid CSRF token', 403);
