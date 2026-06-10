@@ -6,15 +6,7 @@ class Response {
         http_response_code($httpCode);
         header('Content-Type: application/json');
 
-        // $payload = [
-        //     'status'  => $status,
-        //     'message' => $message,
-        //     'data'    => $data,
-        // ];
-
         echo json_encode([
-            // 'payload' => AES::encrypt($payload)
-
             'status'  => $status,
             'message' => $message,
             'data'    => $data,
