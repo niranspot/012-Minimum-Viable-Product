@@ -45,6 +45,12 @@ class AuthController {
 
     }
 
+    public static function csrf(){
+        $token = csrf::generate();
+        $csrftoken['csrf_token'] = $token;
+        Response::success('CSRF TOKEN', $csrftoken);
+    }
+
     public static function refresh(): void {
         $result = AuthService::refresh();
         Response::success('Token refreshed', $result);
