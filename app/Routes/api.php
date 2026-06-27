@@ -82,6 +82,7 @@ route('POST', '/login',         [AuthController::class, 'login']);
 route('POST', '/refresh-token', [AuthController::class, 'refresh']);
 route('POST', '/change-password', [AuthController::class, 'changePassword']);
 route('POST', '/logout', [AuthController::class, 'logout']);
+route('GET', '/csrf-token',         [AuthController::class, 'csrf']);
 
 
 //billing routes (admin, doctor only — enforced inside controller)
