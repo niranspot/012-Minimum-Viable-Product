@@ -8,13 +8,8 @@ class CsrfMiddleware {
         '/register',
         '/login',
         '/refresh-token',
+        '/csrf-token'
 
-        // Patient routes — protected by JWT (AuthMiddleware), not session CSRF-Mithra
-        // '/patients',
-        // Appointment routes — protected by JWT-Mithra
-        // '/appointments',
-        // Calendar — GET, so skipped anyway, but listed for clarity-Mithra
-        // '/calendar',
     ];
 
     public static function handle() {
@@ -30,8 +25,8 @@ class CsrfMiddleware {
 
         // Strip trailing /123 from dynamic routes like /patients/5-Mithra
         // $baseSegment = preg_replace('#/\d+$#', '', $requestUri);
-
-        if (in_array($requestUri, self::$exclude) ) return;
+        // if (in_array($requestUri, self::$exclude) || in_array($baseSegment, self::$exclude)) return;
+        if (in_array($requestUri, self::$exclude)) return;
 
         if (!CSRF::validate()) {
             Response::error('Invalid CSRF token', 403);

@@ -10,8 +10,9 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 
 
 // CORS headers (for Postman/frontend)
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Origin: http://localhost:3000');
+header('Access-Control-Allow-Credentials: true');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS, PATCH');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-CSRF-Token');
 
 // Handle preflight
@@ -21,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // Run CSRF check
-CsrfMiddleware::handle();
+ CsrfMiddleware::handle(); 
 
 // Load routes
 require_once __DIR__ . '/../app/Routes/api.php';
