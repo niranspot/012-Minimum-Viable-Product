@@ -21,7 +21,7 @@ class BillingController {
 
         if ($v->fails()) Response::error(implode(', ', $v->errors()), 400);
 
-        $bill = BillingService::create($payload, (int) $auth['tenant_id']);
+        $bill = BillingService::create($payload);
         Response::success('Invoice generated', $bill, 201);
     }
 
@@ -32,19 +32,19 @@ class BillingController {
         // If patient, only show their bills
         if ($auth['role'] === 'patient') {
             $db   = getDB();
-            $stmt = $db->prepare("SELECT id FROM patients WHERE user_id = ? AND tenant_id = ?");
-            $stmt->execute([$auth['user_id'], (int) $auth['tenant_id']]);
+            $stmt = $db->prepare("SELECT id FROM patients WHERE user_id = ? ");
+            $stmt->execute([$auth['user_id']]);
             $patient = $stmt->fetch();
 
             if (!$patient) Response::error('Patient record not found', 404);
 
-            $bills = BillingService::getByPatient($patient['id'], (int) $auth['tenant_id']);
+            $bills = BillingService::getByPatient($patient['id']);
             Response::success('Billing list fetched', $bills);
         }
 
         // If admin or doctor, show all bills for the tenant
 
-        $bills = BillingService::getAll((int) $auth['tenant_id']);
+        $bills = BillingService::getAll();
         Response::success('Billing list fetched', $bills);
     }
 
@@ -60,7 +60,7 @@ class BillingController {
             Response::error('Status must be: pending or paid', 400);
         }
 
-        $bill = BillingService::update($id, (int) $auth['tenant_id'], $payload);
+        $bill = BillingService::update($id, $payload);
         Response::success('Payment status updated', $bill);
     }
 }

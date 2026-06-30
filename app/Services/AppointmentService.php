@@ -23,13 +23,13 @@ class AppointmentService {
     }
 
     // Helper: resolve patient_id from JWT user_id for 'patient' role
-    private static function resolvePatientId(int $userId, int $tenantId): int {
+    private static function resolvePatientId(int $userId, ): int {
         $db   = getDB();
         $stmt = $db->prepare(
             "SELECT id FROM patients
-             WHERE user_id = ? AND tenant_id = ? AND deleted_at IS NULL"
+             WHERE user_id = ? AND deleted_at IS NULL"
         );
-        $stmt->execute([$userId, $tenantId]);
+        $stmt->execute([$userId, ]);
         $row = $stmt->fetch();
         if (!$row) {
             Response::error('No patient profile found for your account', 404);
@@ -42,38 +42,27 @@ class AppointmentService {
     // ---------------------------------------------------------------
     public static function create(array $data, array $authUser): array {
         $db       = getDB();
-        $tenantId = (int) $authUser['tenant_id'];
+        
         $role     = $authUser['role'];
         $userId   = (int) $authUser['user_id'];
 
         // Resolve patient_id
         if ($role === 'patient') {
-            $patientId = self::resolvePatientId($userId, $tenantId);
+            $patientId = self::resolvePatientId($userId);
         } else {
             if (empty($data['patient_id'])) {
                 Response::error('patient_id is required', 400);
-            }
-            $patientId = (int) $data['patient_id'];
-
-            // Verify patient belongs to same tenant and is not deleted
-            $stmt = $db->prepare(
-                "SELECT id FROM patients
-                 WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL"
-            );
-            $stmt->execute([$patientId, $tenantId]);
-            if (!$stmt->fetch()) {
-                Response::error('Patient not found in your tenant', 404);
             }
         }
 
         // Validate doctor_id — must be active doctor in same tenant
         $stmt = $db->prepare(
             "SELECT id FROM users
-             WHERE id = ? AND tenant_id = ? AND role = 'doctor' AND status = 'active'"
+             WHERE id = ? AND role = 'doctor' AND status = 'active'"
         );
-        $stmt->execute([$data['doctor_id'], $tenantId]);
+        $stmt->execute([$data['doctor_id']]);
         if (!$stmt->fetch()) {
-            Response::error('doctor_id must be an active doctor in your tenant', 400);
+            Response::error('doctor must be active', 400);
         }
 
         // Parse and validate appointment_date
@@ -85,20 +74,19 @@ class AppointmentService {
         // Conflict check — same doctor, same slot, not cancelled
         $stmt = $db->prepare(
             "SELECT id FROM appointments
-             WHERE doctor_id = ? AND appointment_date = ? AND tenant_id = ?
+             WHERE doctor_id = ? AND appointment_date = ?
                AND status != 'cancelled'"
         );
-        $stmt->execute([$data['doctor_id'], $parsedDate, $tenantId]);
+        $stmt->execute([$data['doctor_id'], $parsedDate]);
         if ($stmt->fetch()) {
             Response::error('Doctor already has an appointment at this date and time', 409);
         }
 
         $stmt = $db->prepare(
-            "INSERT INTO appointments (tenant_id, patient_id, doctor_id, appointment_date, status, notes)
-             VALUES (?, ?, ?, ?, 'pending', ?)"
+            "INSERT INTO appointments ( patient_id, doctor_id, appointment_date, status, notes)
+             VALUES (?, ?, ?, 'pending', ?)"
         );
         $stmt->execute([
-            $tenantId,
             $patientId,
             (int) $data['doctor_id'],
             $parsedDate,
@@ -113,22 +101,21 @@ class AppointmentService {
     // ---------------------------------------------------------------
     public static function list(array $authUser): array {
         $db       = getDB();
-        $tenantId = (int) $authUser['tenant_id'];
         $role     = $authUser['role'];
         $userId   = (int) $authUser['user_id'];
 
         if ($role === 'patient') {
-            $patientId = self::resolvePatientId($userId, $tenantId);
+            $patientId = self::resolvePatientId($userId, );
 
             $stmt = $db->prepare(
                 "SELECT a.id, a.patient_id, a.doctor_id, a.appointment_date, a.status, a.notes, a.created_at,
                         u.name AS doctor_name
                  FROM appointments a
                  JOIN users u ON u.id = a.doctor_id
-                 WHERE a.patient_id = ? AND a.tenant_id = ?
+                 WHERE a.patient_id = ?
                  ORDER BY a.appointment_date ASC"
             );
-            $stmt->execute([$patientId, $tenantId]);
+            $stmt->execute([$patientId]);
         } else {
             $stmt = $db->prepare(
                 "SELECT a.id, a.patient_id, a.doctor_id, a.appointment_date, a.status, a.notes, a.created_at,
@@ -138,10 +125,9 @@ class AppointmentService {
                  JOIN users u  ON u.id  = a.doctor_id
                  JOIN patients p  ON p.id  = a.patient_id
                  JOIN users pu ON pu.id = p.user_id
-                 WHERE a.tenant_id = ?
                  ORDER BY a.appointment_date ASC"
             );
-            $stmt->execute([$tenantId]);
+            $stmt->execute();
         }
 
         return self::decryptRows($stmt->fetchAll());
@@ -152,14 +138,13 @@ class AppointmentService {
     // ---------------------------------------------------------------
     public static function update(int $id, array $data, array $authUser): array {
         $db       = getDB();
-        $tenantId = (int) $authUser['tenant_id'];
         $role     = $authUser['role'];
 
         // Fetch current appointment
         $stmt = $db->prepare(
-            "SELECT * FROM appointments WHERE id = ? AND tenant_id = ?"
+            "SELECT * FROM appointments WHERE id = ? "
         );
-        $stmt->execute([$id, $tenantId]);
+        $stmt->execute([$id]);
         $appointment = $stmt->fetch();
 
         if (!$appointment) {
@@ -175,7 +160,7 @@ class AppointmentService {
             }
 
             // 2. Verify this appointment belongs to the logged-in patient's profile
-            $patientId = self::resolvePatientId((int) $authUser['user_id'], $tenantId);
+            $patientId = self::resolvePatientId((int) $authUser['user_id'], );
             if ((int) $appointment['patient_id'] !== $patientId) {
                 Response::error('You can only cancel your own appointments', 403);
             }
@@ -205,14 +190,13 @@ class AppointmentService {
         $stmt = $db->prepare(
             "UPDATE appointments
              SET status = ?, notes = ?, appointment_date = ?
-             WHERE id = ? AND tenant_id = ?"
+             WHERE id = ? "
         );
         $stmt->execute([
             $data['status'],
             self::encryptNotes($newNotes),
             $parsedDate,
             $id,
-            $tenantId,
         ]);
 
         if ($stmt->rowCount() === 0) {
@@ -228,7 +212,6 @@ class AppointmentService {
     // ---------------------------------------------------------------
     public static function calendar(array $authUser, string $from, string $to): array {
         $db       = getDB();
-        $tenantId = (int) $authUser['tenant_id'];
         $role     = $authUser['role'];
         $userId   = (int) $authUser['user_id'];
 
@@ -243,19 +226,18 @@ class AppointmentService {
         }
 
         if ($role === 'patient') {
-            $patientId = self::resolvePatientId($userId, $tenantId);
+            $patientId = self::resolvePatientId($userId);
 
             $stmt = $db->prepare(
                 "SELECT a.id, a.patient_id, a.doctor_id, a.appointment_date, a.status, a.notes,
                         u.name AS doctor_name
                  FROM appointments a
                  JOIN users u ON u.id = a.doctor_id
-                 WHERE a.tenant_id = ?
-                   AND a.patient_id = ?
+                 WHERE  a.patient_id = ?
                    AND a.appointment_date BETWEEN ? AND ?
                  ORDER BY a.appointment_date ASC"
             );
-            $stmt->execute([$tenantId, $patientId, $fromDate, $toDate]);
+            $stmt->execute([ $patientId, $fromDate, $toDate]);
         } else {
             $stmt = $db->prepare(
                 "SELECT a.id, a.patient_id, a.doctor_id, a.appointment_date, a.status, a.notes,
@@ -265,11 +247,10 @@ class AppointmentService {
                  JOIN users u  ON u.id  = a.doctor_id
                  JOIN patients p  ON p.id  = a.patient_id
                  JOIN users pu ON pu.id = p.user_id
-                 WHERE a.tenant_id = ?
-                   AND a.appointment_date BETWEEN ? AND ?
+                 WHERE a.appointment_date BETWEEN ? AND ?
                  ORDER BY a.appointment_date ASC"
             );
-            $stmt->execute([$tenantId, $fromDate, $toDate]);
+            $stmt->execute([ $fromDate, $toDate]);
         }
 
         return self::decryptRows($stmt->fetchAll());

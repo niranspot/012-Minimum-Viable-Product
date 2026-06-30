@@ -26,7 +26,7 @@ class PatientController {
             Response::error(implode(', ', $v->errors()), 400);
         }
 
-        $result = PatientService::create($payload, $authUser['tenant_id']);
+        $result = PatientService::create($payload,);
         Response::success('Patient created', $result, 201);
     }
 
@@ -35,7 +35,7 @@ class PatientController {
         $authUser = AuthMiddleware::handle();
         AuthMiddleware::allowRoles($authUser, ['doctor', 'nurse']);
 
-        $patients = PatientService::list( $authUser['tenant_id']);
+        $patients = PatientService::list();
         Response::success('Patients fetched', $patients);
     }
 
@@ -44,7 +44,7 @@ class PatientController {
     $authUser = AuthMiddleware::handle();
     AuthMiddleware::allowRoles($authUser, ['doctor', 'nurse']);
 
-    $patient = PatientService::getById($id, $authUser['tenant_id']);
+    $patient = PatientService::getById($id,);
     Response::success('Patient fetched', $patient);
     }
 
@@ -65,7 +65,7 @@ class PatientController {
             Response::error(implode(', ', $v->errors()), 400);
         }
 
-        $result = PatientService::update($id, $payload,  $authUser['tenant_id']);
+        $result = PatientService::update($id, $payload, );
         Response::success('Patient updated', $result);
     }
 
@@ -74,7 +74,7 @@ class PatientController {
         $authUser = AuthMiddleware::handle();
         AuthMiddleware::allowRoles($authUser, ['doctor', 'nurse']);
 
-        $result = PatientService::delete($id,  $authUser['tenant_id']);
+        $result = PatientService::delete($id, );
         Response::success('Patient deleted', $result);
     }
 }

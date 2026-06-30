@@ -32,12 +32,5 @@ class DashboardController {
         Response::success('Prescription analytics fetched', $data);
     }
 
-    // GET /dashboard/tenant-analytics  (Admin only)
-    public static function tenantAnalytics() {
-        $auth = AuthMiddleware::handle();
-        AuthMiddleware::allowRoles($auth, ['admin']);
 
-        $data = DashboardService::tenantAnalytics();
-        Response::success('Tenant analytics fetched', $data);
-    }
 }
