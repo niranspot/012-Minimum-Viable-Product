@@ -42,7 +42,7 @@ class AppointmentService {
     // ---------------------------------------------------------------
     public static function create(array $data, array $authUser): array {
         $db       = getDB();
-        
+        $patientId = $data['patient_id'] ?? null;
         $role     = $authUser['role'];
         $userId   = (int) $authUser['user_id'];
 
