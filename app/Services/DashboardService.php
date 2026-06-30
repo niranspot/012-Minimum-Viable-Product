@@ -24,7 +24,6 @@ class DashboardService {
         $stmt = $db->prepare(
             "SELECT status, COUNT(id) AS count
              FROM appointments
-             WHERE
              GROUP BY status"
         );
         $stmt->execute();
@@ -74,50 +73,47 @@ class DashboardService {
     // Optional query params: ?from=YYYY-MM-DD&to=YYYY-MM-DD
     // Returns appointment counts per day and per doctor in date range
     // ---------------------------------------------------------------
-    public static function appointments($authUser) {
-        $db       = getDB();
-        $from     = $_GET['from'] ?? null;
-        $to       = $_GET['to']   ?? null;
+public static function appointments($authUser) {
+    $db   = getDB();
+    $from = $_GET['from'] ?? null;
+    $to   = $_GET['to']   ?? null;
 
-        $dateFilter = '';
-        $params     = [];
+    $dateFilter = '';
+    $params     = [];
 
-        if ($from && $to) {
-            $dateFilter = "DATE(a.appointment_date) BETWEEN ? AND ?";
-            $params[]   = $from;
-            $params[]   = $to;
-        }
-
-        // Appointments per day
-        $stmt = $db->prepare(
-            "SELECT DATE(appointment_date) AS date, COUNT(*) AS count
-             FROM appointments a
-             WHERE  $dateFilter
-             GROUP BY DATE(appointment_date)
-             ORDER BY date ASC"
-        );
-        $stmt->execute($params);
-        $perDay = $stmt->fetchAll();
-
-        // Appointments per doctor
-        $stmt = $db->prepare(
-            "SELECT u.name AS doctor_name, u.id AS doctor_id, COUNT(*) AS total,
-                    SUM(a.status = 'completed') AS completed,
-                    SUM(a.status = 'cancelled') AS cancelled
-             FROM appointments a
-             JOIN users u ON a.doctor_id = u.id
-             WHERE  $dateFilter
-             GROUP BY a.doctor_id
-             ORDER BY total DESC"
-        );
-        $stmt->execute($params);
-        $perDoctor = $stmt->fetchAll();
-
-        return [
-            'per_day'    => $perDay,
-            'per_doctor' => $perDoctor,
-        ];
+    if ($from && $to) {
+        $dateFilter = "WHERE DATE(a.appointment_date) BETWEEN ? AND ?";
+        $params[]   = $from;
+        $params[]   = $to;
     }
+
+    // Appointments per day
+    $stmt = $db->prepare(
+        "SELECT DATE(appointment_date) AS date, COUNT(*) AS count
+         FROM appointments a
+         $dateFilter
+         GROUP BY DATE(appointment_date)
+         ORDER BY date ASC"
+    );
+    $stmt->execute($params);
+    $perDay = $stmt->fetchAll();
+
+    // Appointments per doctor
+    $stmt = $db->prepare(
+        "SELECT u.name AS doctor_name, u.id AS doctor_id, COUNT(*) AS total,
+                SUM(a.status = 'completed') AS completed,
+                SUM(a.status = 'cancelled') AS cancelled
+         FROM appointments a
+         JOIN users u ON a.doctor_id = u.id
+         $dateFilter
+         GROUP BY a.doctor_id
+         ORDER BY total DESC"
+    );
+    $stmt->execute($params);
+    $perDoctor = $stmt->fetchAll();
+
+    return ['per_day' => $perDay, 'per_doctor' => $perDoctor];
+}
 
     // ---------------------------------------------------------------
     // GET /dashboard/prescriptions  — Provider & Admin
