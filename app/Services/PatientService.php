@@ -38,15 +38,15 @@ class PatientService {
     // ---------------------------------------------------------------
     // POST /patients — Create patient profile
     // ---------------------------------------------------------------
-    public static function create(array $data, int $tenantId): array {
+    public static function create(array $data, ): array {
         $db = getDB();
 
         // user_id must be an active patient-role user in this tenant
         $stmt = $db->prepare(
             "SELECT id FROM users
-             WHERE id = ? AND tenant_id = ? AND role = 'patient' AND status = 'active'"
+             WHERE id = ? AND role = 'patient' AND status = 'active'"
         );
-        $stmt->execute([$data['user_id'], $tenantId]);
+        $stmt->execute([$data['user_id']]);
         if (!$stmt->fetch()) {
             Response::error('user_id must be an active patient user in your tenant', 400);
         }
@@ -54,9 +54,9 @@ class PatientService {
         // Prevent duplicate patient profile for same user
         $stmt = $db->prepare(
             "SELECT id FROM patients
-             WHERE user_id = ? AND tenant_id = ? AND deleted_at IS NULL"
+             WHERE user_id = ? AND deleted_at IS NULL"
         );
-        $stmt->execute([$data['user_id'], $tenantId]);
+        $stmt->execute([$data['user_id']]);
         if ($stmt->fetch()) {
             Response::error('Patient profile already exists for this user', 400);
         }
@@ -65,11 +65,10 @@ class PatientService {
         $data = self::encryptFields($data);
 
         $stmt = $db->prepare(
-            "INSERT INTO patients (tenant_id, user_id, blood_group, dob, gender, address, emergency_contact)
-             VALUES (?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO patients ( user_id, blood_group, dob, gender, address, emergency_contact)
+             VALUES (?, ?, ?, ?, ?, ?)"
         );
         $stmt->execute([
-            $tenantId,
             $data['user_id'],
             $data['blood_group']       ?? null,
             $data['dob']               ?? null,
@@ -84,7 +83,7 @@ class PatientService {
     // ---------------------------------------------------------------
     // GET /patients — List all patients in tenant
     // ---------------------------------------------------------------
-    public static function list(int $tenantId): array {
+    public static function list(): array {
         $db   = getDB();
         $stmt = $db->prepare(
             "SELECT p.id, p.user_id, p.blood_group, p.dob, p.gender, p.address,
@@ -92,14 +91,14 @@ class PatientService {
                     u.name, u.email
              FROM patients p
              JOIN users u ON u.id = p.user_id
-             WHERE p.tenant_id = ? AND p.deleted_at IS NULL"
+             WHERE p.deleted_at IS NULL"
         );
-        $stmt->execute([$tenantId]);
+        $stmt->execute();
         return self::decryptRows($stmt->fetchAll());
     }
 
     // GET /patients/{id} — Fetch single patient
-    public static function getById(int $id, int $tenantId): array {
+    public static function getById(int $id): array {
     $db = getDB();
 
     $stmt = $db->prepare(
@@ -108,9 +107,9 @@ class PatientService {
                 u.name, u.email
          FROM patients p
          JOIN users u ON u.id = p.user_id
-         WHERE p.id = ? AND p.tenant_id = ? AND p.deleted_at IS NULL"
+         WHERE p.id = ?  AND p.deleted_at IS NULL"
     );
-    $stmt->execute([$id, $tenantId]);
+    $stmt->execute([$id]);
     $patient = $stmt->fetch();
 
     if (!$patient) {
@@ -123,15 +122,15 @@ class PatientService {
     // ---------------------------------------------------------------
     // PUT /patients/{id} — Update patient
     // ---------------------------------------------------------------
-    public static function update(int $id, array $data, int $tenantId): array {
+    public static function update(int $id, array $data, ): array {
         $db = getDB();
 
         // Check patient exists in this tenant and is not deleted
         $stmt = $db->prepare(
             "SELECT id FROM patients
-             WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL"
+             WHERE id = ? AND deleted_at IS NULL"
         );
-        $stmt->execute([$id, $tenantId]);
+        $stmt->execute([$id]);
         if (!$stmt->fetch()) {
             Response::error('Patient not found', 404);
         }
@@ -142,7 +141,7 @@ class PatientService {
         $stmt = $db->prepare(
             "UPDATE patients
              SET blood_group = ?, dob = ?, gender = ?, address = ?, emergency_contact = ?
-             WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL"
+             WHERE id = ?  AND deleted_at IS NULL"
         );
         $stmt->execute([
             $data['blood_group']       ?? null,
@@ -151,7 +150,6 @@ class PatientService {
             $data['address']           ?? null,
             $data['emergency_contact'] ?? null,
             $id,
-            $tenantId,
         ]);
 
         if ($stmt->rowCount() === 0) {
@@ -164,24 +162,24 @@ class PatientService {
     // ---------------------------------------------------------------
     // DELETE /patients/{id} — Soft delete
     // ---------------------------------------------------------------
-    public static function delete(int $id, int $tenantId): array {
+    public static function delete(int $id ): array {
         $db = getDB();
 
         // Check patient exists
         $stmt = $db->prepare(
             "SELECT id FROM patients
-             WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL"
+             WHERE id = ? AND deleted_at IS NULL"
         );
-        $stmt->execute([$id, $tenantId]);
+        $stmt->execute([$id]);
         if (!$stmt->fetch()) {
             Response::error('Patient not found', 404);
         }
 
         $stmt = $db->prepare(
             "UPDATE patients SET deleted_at = NOW()
-             WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL"
+             WHERE id = ? AND deleted_at IS NULL"
         );
-        $stmt->execute([$id, $tenantId]);
+        $stmt->execute([$id]);
 
         if ($stmt->rowCount() === 0) {
             Response::error('Could not delete patient', 400);

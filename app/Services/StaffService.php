@@ -5,17 +5,15 @@ require_once __DIR__ . '/../Security/AES.php';
 
 class StaffService {
 
-    public static function getAll($tenantId) {
+    public static function getAll() {
         $db   = getDB();
         $stmt = $db->prepare("
             SELECT s.id, u.name, u.email, s.user_id, u.role, s.specialization, s.status, s.created_at
-                    
             FROM staff s
             JOIN users u ON s.user_id = u.id
-            WHERE s.tenant_id = ?
             ORDER BY s.id DESC
         ");
-        $stmt->execute([$tenantId]);
+        $stmt->execute();
         $staff= $stmt->fetchAll();
         return array_map(function($s) {
             $s['specialization'] = AES::decrypt($s['specialization']);
@@ -23,10 +21,10 @@ class StaffService {
         }, $staff);
     }
 
-    public static function getById($id, $tenantId) {
+    public static function getById($id) {
         $db   = getDB();
-        $stmt = $db->prepare("select id from staff where id = ? and tenant_id = ?");
-        $stmt->execute([$id, $tenantId]);
+        $stmt = $db->prepare("select id from staff where id = ? ");
+        $stmt->execute([$id]);
         if (!$stmt->fetch()) Response::error('Staff not found', 404);
         $stmt = $db->prepare("
             SELECT s.id, u.name, s.user_id, u.role, s.specialization, s.status, s.created_at
@@ -35,24 +33,24 @@ class StaffService {
             JOIN users u ON s.user_id = u.id
             WHERE s.id = ? AND s.tenant_id = ?
         ");
-        $stmt->execute([$id, $tenantId]);
+        $stmt->execute([$id]);
         $staff = $stmt->fetch();
         $staff['specialization'] = AES::decrypt($staff['specialization']);
         if (!$staff) Response::error('Staff not found', 404);
         return $staff;
     }
 
-    public static function create($data, $tenantId) {
+    public static function create($data, ) {
         $db = getDB();
 
         // Check already exists
-        $stmt = $db->prepare("SELECT id FROM staff WHERE user_id = ? AND tenant_id = ?");
-        $stmt->execute([$data['user_id'], $tenantId]);
+        $stmt = $db->prepare("SELECT id FROM staff WHERE user_id = ? ");
+        $stmt->execute([$data['user_id'], ]);
         if ($stmt->fetch()) Response::error('Staff profile already exists for this user', 400);
 
         // Validate user exists and is not a patient
-        $stmt = $db->prepare("SELECT role FROM users WHERE id = ? AND tenant_id = ?");
-        $stmt->execute([$data['user_id'], $tenantId]);
+        $stmt = $db->prepare("SELECT role FROM users WHERE id = ? ");
+        $stmt->execute([$data['user_id'], ]);
         $user = $stmt->fetch();
 
         if (!$user) Response::error('User not found', 404);
@@ -60,20 +58,19 @@ class StaffService {
 
         // Insert staff record
         $stmt = $db->prepare("
-            INSERT INTO staff (tenant_id, user_id, specialization, status)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO staff ( user_id, specialization, status)
+            VALUES ( ?, ?, ?)
         ");
         $stmt->execute([
-            $tenantId,
             $data['user_id'],
             AES::encrypt($data['specialization'] ?? null),
             'active',
         ]);
 
-        return self::getById((int) $db->lastInsertId(), $tenantId);
+        return self::getById((int) $db->lastInsertId(), );
     }
 
-    public static function update($id, $tenantId, $data) {
+    public static function update($id, $data) {
         $db      = getDB();
         $fields  = [];
         $params  = [];
@@ -89,28 +86,27 @@ class StaffService {
         if (empty($fields)) Response::error('Nothing to update', 400);
 
         $params[] = $id;
-        $params[] = $tenantId;
 
-        $stmt = $db->prepare("UPDATE staff SET " . implode(', ', $fields) . " WHERE id = ? AND tenant_id = ?");
+        $stmt = $db->prepare("UPDATE staff SET " . implode(', ', $fields) . " WHERE id = ? ");
         $stmt->execute($params);
 
         if ($stmt->rowCount() === 0) Response::error('Staff not found or nothing changed', 404);
 
         // Sync status to users table
-        $stmt = $db->prepare("SELECT user_id, status FROM staff WHERE id = ? AND tenant_id = ?");
-        $stmt->execute([$id, $tenantId]);
+        $stmt = $db->prepare("SELECT user_id, status FROM staff WHERE id = ? ");
+        $stmt->execute([$id, ]);
         $staff = $stmt->fetch();
 
         $stmt = $db->prepare("UPDATE users SET status = ? WHERE id = ?");
         $stmt->execute([$staff['status'], $staff['user_id']]);
 
-        return self::getById($id, $tenantId);
+        return self::getById($id, );
     }
 
-    public static function delete($id, $tenantId) {
+    public static function delete($id, ) {
         $db   = getDB();
-        $stmt = $db->prepare("DELETE FROM staff WHERE id = ? AND tenant_id = ?");
-        $stmt->execute([$id, $tenantId]);
+        $stmt = $db->prepare("DELETE FROM staff WHERE id = ? ");
+        $stmt->execute([$id, ]);
         if ($stmt->rowCount() === 0) Response::error('Staff not found', 404);
     }
 }

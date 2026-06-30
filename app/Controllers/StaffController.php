@@ -9,7 +9,7 @@ class StaffController {
     public static function index() {
         $auth = AuthMiddleware::handle();
         AuthMiddleware::allowRoles($auth, ['admin', 'doctor', 'nurse']);
-        $staff = StaffService::getAll((int) $auth['tenant_id']);
+        $staff = StaffService::getAll();
         Response::success('Staff list retrieved', $staff);
     }
     
@@ -17,7 +17,7 @@ class StaffController {
     public static function show($id) {
         $auth = AuthMiddleware::handle();
         AuthMiddleware::allowRoles($auth, ['admin', 'doctor', 'nurse']);
-        $staff = StaffService::getById($id, (int) $auth['tenant_id']);
+        $staff = StaffService::getById($id, );
         Response::success('Staff retrieved', $staff);
     }
     
@@ -31,7 +31,7 @@ class StaffController {
         if ($v->fails()) {
             Response::error(implode(', ', $v->errors()), 400);
         }
-        $staff = StaffService::create($payload, (int) $auth['tenant_id']);
+        $staff = StaffService::create($payload, );
         Response::success('Staff created', $staff, 201);
     }
     
@@ -43,7 +43,7 @@ class StaffController {
         if (empty($payload)) {
             Response::error('No data provided', 400);
         }
-        $staff = StaffService::update($id, (int) $auth['tenant_id'], $payload);
+        $staff = StaffService::update($id,  $payload);
         Response::success('Staff updated', $staff);
     }
     
@@ -51,7 +51,7 @@ class StaffController {
     public static function destroy($id) {
         $auth = AuthMiddleware::handle();
         AuthMiddleware::allowRoles($auth, ['admin']);
-        StaffService::delete($id, (int) $auth['tenant_id']);
+        StaffService::delete($id, );
         Response::success('Staff deleted');
     }
 }

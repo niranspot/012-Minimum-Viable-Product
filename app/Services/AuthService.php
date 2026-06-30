@@ -5,6 +5,104 @@ require_once __DIR__ . '/../Security/JWT.php';
 require_once __DIR__ . '/../Helpers/Response.php';
 
 class AuthService {
+    public static function tenantSignup($data) {
+        $db = getMasterDB();
+
+        $subdomain = preg_replace('/[^a-zA-Z0-9-]/', '', strtolower($data['subdomain']));
+        if (empty($subdomain)) {
+            Response::error('Invalid subdomain format', 400);
+        }
+
+        // Check if subdomain exists in Master DB
+        $stmt = $db->prepare("SELECT id FROM tenants WHERE subdomain = ?");
+        $stmt->execute([$subdomain]);
+        if ($stmt->fetch()) {
+            Response::error('Subdomain already exists', 400);
+        }
+
+        // Check if email exists in Master DB (tenants owner email)
+        $stmt = $db->prepare("SELECT id FROM tenants WHERE email = ?");
+        $stmt->execute([$data['email']]);
+        if ($stmt->fetch()) {
+            Response::error('Email already registered for another tenant', 400);
+        }
+
+        // Generate a tenant_id (UUID-like or simple code based on subdomain/time)
+        $tenantId = 'TNT' . strtoupper(substr(uniqid(), -8));
+
+        // Generate tenant database name
+        $dbName = 'tenant_' . $subdomain . '_db';
+
+        // Hash owner password
+        $hashedPassword = Hash::make($data['password']);
+
+        // Handle initial theme settings
+        $themeSettings = isset($data['theme_settings']) 
+            ? (is_array($data['theme_settings']) ? json_encode($data['theme_settings']) : (string) $data['theme_settings'])
+            : null;
+
+        // Insert into Master DB tenants table
+        $stmt = $db->prepare("
+            INSERT INTO tenants (tenant_id, company_name, subdomain, email, password, plan, db_name, theme_settings, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')
+        ");
+        $stmt->execute([
+            $tenantId,
+            $data['company_name'],
+            $subdomain,
+            $data['email'],
+            $hashedPassword,
+            $data['plan'] ?? 'basic',
+            $dbName,
+            $themeSettings
+        ]);
+
+        return [
+            'tenant_id' => $tenantId,
+            'company_name' => $data['company_name'],
+            'subdomain' => $subdomain,
+            'db_name' => $dbName,
+            'email' => $data['email'],
+            'plan' => $data['plan'] ?? 'basic',
+            'theme_settings' => $themeSettings ? json_decode($themeSettings, true) : null
+        ];
+    }
+
+    public static function getTenantConfig($subdomain) {
+        $db = getMasterDB();
+        $stmt = $db->prepare("SELECT id, tenant_id, company_name, subdomain, plan, theme_settings, status FROM tenants WHERE subdomain = ? OR tenant_id = ?");
+        $stmt->execute([$subdomain, $subdomain]);
+        $tenant = $stmt->fetch();
+
+        if (!$tenant) {
+            Response::error('Tenant not found', 404);
+        }
+
+        $theme = null;
+        if (!empty($tenant['theme_settings'])) {
+            $theme = json_decode($tenant['theme_settings'], true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $theme = $tenant['theme_settings'];
+            }
+        }
+
+        return [
+            'tenant_id' => $tenant['tenant_id'],
+            'company_name' => $tenant['company_name'],
+            'subdomain' => $tenant['subdomain'],
+            'plan' => $tenant['plan'],
+            'status' => $tenant['status'],
+            'theme_settings' => $theme
+        ];
+    }
+
+    public static function updateTheme($tenantId, $themeSettings) {
+        $db = getMasterDB();
+        $themeStr = is_array($themeSettings) ? json_encode($themeSettings) : (string) $themeSettings;
+        $stmt = $db->prepare("UPDATE tenants SET theme_settings = ? WHERE id = ?");
+        $stmt->execute([$themeStr, $tenantId]);
+    }
+
     public static function register( $data) {
         $db = getDB();
 
@@ -16,16 +114,15 @@ class AuthService {
         }
 
         // Check tenant exists
-        $stmt = $db->prepare("SELECT id FROM tenants WHERE id = ? AND status = 'active'");
-        $stmt->execute([$data['tenant_id']]);
-        if (!$stmt->fetch()) {
-            Response::error('Invalid tenant', 400);
-        }
+        // $stmt = $db->prepare("SELECT id FROM tenants WHERE id = ? AND status = 'active'");
+        // $stmt->execute([$data['tenant_id']]);
+        // if (!$stmt->fetch()) {
+        //     Response::error('Invalid tenant', 400);
+        // }
 
         // Insert user
-        $stmt = $db->prepare("INSERT INTO users (tenant_id, name, email, password, role) VALUES (?, ?, ?, ?, ?)");
+        $stmt = $db->prepare("INSERT INTO users ( name, email, password, role) VALUES (?, ?, ?, ?)");
         $stmt->execute([
-            $data['tenant_id'],
             $data['name'],
             $data['email'],
             Hash::make($data['password']),
@@ -42,6 +139,8 @@ class AuthService {
         $stmt->execute([$data['email']]);
         $user = $stmt->fetch();
 
+
+
         if (!$user || !Hash::verify($data['password'], $user['password'])) {
             Response::error('Invalid credentials', 401);
         }
@@ -49,7 +148,6 @@ class AuthService {
         $accessToken  = JWT::generateAccess([
             'user_id'   => $user['id'],
             'role'      => $user['role'],
-            'tenant_id' => $user['tenant_id']
         ]);
         $refreshToken = bin2hex(random_bytes(32));
         $expiresAt    = date('Y-m-d H:i:s', time() + JWT_REFRESH_EXPIRE);
@@ -89,7 +187,6 @@ class AuthService {
         $newAccessToken  = JWT::generateAccess([
             'user_id'   => $user['id'],
             'role'      => $user['role'],
-            'tenant_id' => $user['tenant_id']
         ]);
         $newRefreshToken = bin2hex(random_bytes(32));
         $expiresAt       = date('Y-m-d H:i:s', time() + JWT_REFRESH_EXPIRE);

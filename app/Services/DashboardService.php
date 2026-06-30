@@ -10,25 +10,24 @@ class DashboardService {
     // ---------------------------------------------------------------
     public static function summary($authUser) {
         $db       = getDB();
-        $tenantId = (int) $authUser['tenant_id'];
 
         // Total active patients
         $stmt = $db->prepare(
             "SELECT COUNT(id) AS total_patients
              FROM patients
-             WHERE tenant_id = ? AND deleted_at IS NULL"
+             WHERE deleted_at IS NULL"
         );
-        $stmt->execute([$tenantId]);
+        $stmt->execute();
         $patientsRow = $stmt->fetch();
 
         // Appointments grouped by status
         $stmt = $db->prepare(
             "SELECT status, COUNT(id) AS count
              FROM appointments
-             WHERE tenant_id = ?
+             WHERE
              GROUP BY status"
         );
-        $stmt->execute([$tenantId]);
+        $stmt->execute();
         $apptRows = $stmt->fetchAll();
 
         $appointmentStats = [
@@ -47,10 +46,9 @@ class DashboardService {
         $stmt = $db->prepare(
             "SELECT status, COUNT(id) AS count
              FROM prescriptions
-             WHERE tenant_id = ?
              GROUP BY status"
         );
-        $stmt->execute([$tenantId]);
+        $stmt->execute();
         $rxRows = $stmt->fetchAll();
 
         $prescriptionSummary = [
@@ -78,15 +76,14 @@ class DashboardService {
     // ---------------------------------------------------------------
     public static function appointments($authUser) {
         $db       = getDB();
-        $tenantId = (int) $authUser['tenant_id'];
         $from     = $_GET['from'] ?? null;
         $to       = $_GET['to']   ?? null;
 
         $dateFilter = '';
-        $params     = [$tenantId];
+        $params     = [];
 
         if ($from && $to) {
-            $dateFilter = "AND DATE(a.appointment_date) BETWEEN ? AND ?";
+            $dateFilter = "DATE(a.appointment_date) BETWEEN ? AND ?";
             $params[]   = $from;
             $params[]   = $to;
         }
@@ -95,7 +92,7 @@ class DashboardService {
         $stmt = $db->prepare(
             "SELECT DATE(appointment_date) AS date, COUNT(*) AS count
              FROM appointments a
-             WHERE a.tenant_id = ? $dateFilter
+             WHERE  $dateFilter
              GROUP BY DATE(appointment_date)
              ORDER BY date ASC"
         );
@@ -109,7 +106,7 @@ class DashboardService {
                     SUM(a.status = 'cancelled') AS cancelled
              FROM appointments a
              JOIN users u ON a.doctor_id = u.id
-             WHERE a.tenant_id = ? $dateFilter
+             WHERE  $dateFilter
              GROUP BY a.doctor_id
              ORDER BY total DESC"
         );
@@ -128,7 +125,6 @@ class DashboardService {
     // ---------------------------------------------------------------
     public static function prescriptions($authUser) {
         $db       = getDB();
-        $tenantId = (int) $authUser['tenant_id'];
 
         // Prescriptions by status with doctor name
         $stmt = $db->prepare(
@@ -136,11 +132,10 @@ class DashboardService {
                     u.name AS doctor_name, p.doctor_id
              FROM prescriptions p
              JOIN users u ON p.doctor_id = u.id
-             WHERE p.tenant_id = ?
              GROUP BY p.status, p.doctor_id
              ORDER BY count DESC"
         );
-        $stmt->execute([$tenantId]);
+        $stmt->execute();
         $byStatusDoctor = $stmt->fetchAll();
 
         // Total per doctor (summary)
@@ -148,11 +143,10 @@ class DashboardService {
             "SELECT u.name AS doctor_name, p.doctor_id, COUNT(*) AS total_prescriptions
              FROM prescriptions p
              JOIN users u ON p.doctor_id = u.id
-             WHERE p.tenant_id = ?
              GROUP BY p.doctor_id
              ORDER BY total_prescriptions DESC"
         );
-        $stmt->execute([$tenantId]);
+        $stmt->execute();
         $perDoctor = $stmt->fetchAll();
 
         return [
@@ -161,34 +155,5 @@ class DashboardService {
         ];
     }
 
-    // ---------------------------------------------------------------
-    // GET /dashboard/tenant-analytics  — Admin only
-    // Returns cross-tenant comparison: patients, appointments, prescriptions
-    // ---------------------------------------------------------------
-    public static function tenantAnalytics() {
-        $db = getDB();
-
-        $stmt = $db->prepare(
-            "SELECT
-                t.id AS tenant_id,
-                t.name AS tenant_name,
-                t.status AS tenant_status,
-                (SELECT COUNT(*) FROM patients p
-                 WHERE p.tenant_id = t.id AND p.deleted_at IS NULL) AS total_patients,
-                (SELECT COUNT(*) FROM appointments a
-                 WHERE a.tenant_id = t.id) AS total_appointments,
-                (SELECT COUNT(*) FROM appointments a
-                 WHERE a.tenant_id = t.id AND a.status = 'completed') AS completed_appointments,
-                (SELECT COUNT(*) FROM prescriptions rx
-                 WHERE rx.tenant_id = t.id) AS total_prescriptions,
-                (SELECT COUNT(*) FROM users u
-                 WHERE u.tenant_id = t.id AND u.status = 'active') AS active_users
-             FROM tenants t
-             ORDER BY t.id ASC"
-        );
-        $stmt->execute();
-        $rows = $stmt->fetchAll();
-
-        return ['tenants' => $rows];
-    }
+    
 }

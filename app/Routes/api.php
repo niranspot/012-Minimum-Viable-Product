@@ -77,12 +77,15 @@ function routeMatch($method, $pattern, $handler) {
 //------------------------------------------------------------------------------------------------------
 //-Niranjan
 // Auth routes (no auth middleware needed)-Niranjan
+route('POST', '/tenant/signup', [AuthController::class, 'tenantSignup']);
 route('POST', '/register',      [AuthController::class, 'register']);
 route('POST', '/login',         [AuthController::class, 'login']);
 route('POST', '/refresh-token', [AuthController::class, 'refresh']);
 route('POST', '/change-password', [AuthController::class, 'changePassword']);
 route('POST', '/logout', [AuthController::class, 'logout']);
 route('GET', '/csrf-token',         [AuthController::class, 'csrf']);
+route('GET', '/tenant/config',      [AuthController::class, 'tenantConfig']);
+route('PUT', '/tenant/theme',       [AuthController::class, 'updateTheme']);
 
 
 //billing routes (admin, doctor only — enforced inside controller)
@@ -121,7 +124,6 @@ route('GET', '/calendar', [AppointmentController::class, 'calendar']);
 route('GET', '/dashboard/summary',          [DashboardController::class, 'summary']);
 route('GET', '/dashboard/appointments',     [DashboardController::class, 'appointments']);
 route('GET', '/dashboard/prescriptions',    [DashboardController::class, 'prescriptions']);
-route('GET', '/dashboard/tenant-analytics', [DashboardController::class, 'tenantAnalytics']);
 
 
 //----------------------------------------------------------------------------------------

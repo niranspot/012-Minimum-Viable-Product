@@ -4,7 +4,7 @@ require_once __DIR__ . '/../Helpers/Response.php';
 
 class MessageService {
 
-    public static function getByAppointment($appointmentId, $tenantId) {
+    public static function getByAppointment($appointmentId, ) {
         $db   = getDB();
         $stmt = $db->prepare("
             SELECT m.*,
@@ -12,10 +12,10 @@ class MessageService {
                    u.role AS sender_role
             FROM messages m
             JOIN users u ON m.sender_id = u.id
-            WHERE m.appointment_id = ? AND m.tenant_id = ?
+            WHERE m.appointment_id = ? 
             ORDER BY m.created_at ASC
         ");
-        $stmt->execute([$appointmentId, $tenantId]);
+        $stmt->execute([$appointmentId, ]);
         $data= $stmt->fetchAll();
         return array_map(fn($d) => [
             'id' => (int) $d['id'],
@@ -28,20 +28,19 @@ class MessageService {
         ], $data);
     }
 
-    public static function create($data, $tenantId, $senderId) {
+    public static function create($data, $senderId) {
         $db = getDB();
 
         // Check appointment exists
-        $stmt = $db->prepare("SELECT id FROM appointments WHERE id = ? AND tenant_id = ?");
-        $stmt->execute([$data['appointment_id'], $tenantId]);
+        $stmt = $db->prepare("SELECT id FROM appointments WHERE id = ? ");
+        $stmt->execute([$data['appointment_id'] ]);
         if (!$stmt->fetch()) Response::error('Appointment not found', 404);
 
         $stmt = $db->prepare("
-            INSERT INTO messages (tenant_id, appointment_id, sender_id, message)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO messages ( appointment_id, sender_id, message)
+            VALUES ( ?, ?, ?)
         ");
         $stmt->execute([
-            $tenantId,
             $data['appointment_id'],
             $senderId,
             AES::encrypt($data['message'])
