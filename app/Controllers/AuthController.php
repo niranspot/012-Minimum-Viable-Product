@@ -7,6 +7,46 @@ require_once __DIR__ . '/../Security/AES.php';
 
 class AuthController {
 
+    public static function tenantSignup() {
+        $payload = json_decode(file_get_contents('php://input'), true);
+
+        $v = new Validator($payload);
+        $v->required('company_name')
+          ->required('subdomain')
+          ->required('email')->email('email')
+          ->required('password')->min('password', 6);
+
+        if ($v->fails()) {
+            Response::error(implode(', ', $v->errors()), 400);
+        }
+
+        $result = AuthService::tenantSignup($payload);
+        Response::success('Tenant registered successfully', $result, 201);
+    }
+
+    public static function tenantConfig() {
+        $subdomain = getSubdomain();
+        if (!$subdomain) {
+            Response::error('Tenant subdomain, query parameter, or header is required', 400);
+        }
+
+        $config = AuthService::getTenantConfig($subdomain);
+        Response::success('Tenant configuration retrieved', $config);
+    }
+
+    public static function updateTheme() {
+        $auth = AuthMiddleware::handle();
+        AuthMiddleware::allowRoles($auth, ['admin']);
+
+        $payload = json_decode(file_get_contents('php://input'), true);
+        if (!isset($payload['theme_settings'])) {
+            Response::error('theme_settings is required', 400);
+        }
+
+        AuthService::updateTheme((int) $auth['tenant_id'], $payload['theme_settings']);
+        Response::success('Tenant theme updated successfully');
+    }
+
     public static function register(){
         $payload    = json_decode(file_get_contents('php://input'), true);
         // $payload = AES::decrypt($body['payload'] ?? '');
@@ -15,8 +55,8 @@ class AuthController {
         $v->required('name')
           ->required('email')->email('email')
           ->required('password')->min('password', 6)
-          ->required('role')->in('role', ROLES)
-          ->required('tenant_id');
+          ->required('role')->in('role', ROLES);
+        //   ->required('tenant_id');
 
         if ($v->fails()) {
             Response::error(implode(', ', $v->errors()), 400);

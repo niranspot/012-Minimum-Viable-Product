@@ -18,7 +18,7 @@ class MessageController {
 
         if ($v->fails()) Response::error(implode(', ', $v->errors()), 400);
 
-        $result = MessageService::create($payload, (int) $auth['tenant_id'], (int) $auth['user_id']);
+        $result = MessageService::create($payload, (int) $auth['user_id']);
         Response::success('Note sent', $result, 201);
     }
 
@@ -26,7 +26,7 @@ class MessageController {
         $auth = AuthMiddleware::handle();
         AuthMiddleware::allowRoles($auth, ['doctor', 'nurse']);
 
-        $messages = MessageService::getByAppointment($appointmentId, (int) $auth['tenant_id']);
+        $messages = MessageService::getByAppointment($appointmentId);
         Response::success('Notes fetched', $messages);
     }
 }

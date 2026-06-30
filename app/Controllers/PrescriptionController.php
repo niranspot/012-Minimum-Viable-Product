@@ -8,28 +8,28 @@ class PrescriptionController {
     public static function index(): void {
         $auth = AuthMiddleware::handle();
         AuthMiddleware::allowRoles($auth, ['admin', 'doctor', 'pharmacist']);
-        $list = PrescriptionService::getAll((int) $auth['tenant_id']);
+        $list = PrescriptionService::getAll();
         Response::success('Prescriptions retrieved', $list);
     }
     // GET /prescriptions/{id}
     public static function show(int $id): void {
         $auth = AuthMiddleware::handle();
         AuthMiddleware::allowRoles($auth, ['admin', 'doctor', 'pharmacist', 'nurse']);
-        $rx = PrescriptionService::getById($id, (int) $auth['tenant_id']);
+        $rx = PrescriptionService::getById($id, );
         Response::success('Prescription retrieved', $rx);
     }
     // GET /patients/{id}/prescriptions
     public static function byPatient(int $patientId): void {
         $auth = AuthMiddleware::handle();
         AuthMiddleware::allowRoles($auth, ['admin', 'doctor', 'pharmacist', 'nurse']);
-        $list = PrescriptionService::getByPatient($patientId, (int) $auth['tenant_id']);
+        $list = PrescriptionService::getByPatient($patientId, );
         Response::success('Patient prescriptions retrieved', $list);
     }
     // GET /appointments/{id}/prescription
     public static function byAppointment(int $appointmentId): void {
         $auth = AuthMiddleware::handle();
         AuthMiddleware::allowRoles($auth, ['admin', 'doctor', 'pharmacist', 'nurse']);
-        $rx = PrescriptionService::getByAppointment($appointmentId, (int) $auth['tenant_id']);
+        $rx = PrescriptionService::getByAppointment($appointmentId, );
         Response::success('Appointment prescription retrieved', $rx);
     }
     // POST /prescriptions
@@ -44,7 +44,7 @@ class PrescriptionController {
         if ($v->fails()) {
         Response::error(implode(', ', $v->errors()), 400);
         }
-        $rx = PrescriptionService::create($payload, (int) $auth['tenant_id'], (int) $auth['user_id']);
+        $rx = PrescriptionService::create($payload, (int) $auth['user_id']);
         Response::success('Prescription created', $rx, 201);
     }
     // PUT /prescriptions/{id}
@@ -55,7 +55,7 @@ class PrescriptionController {
         if (empty($payload)) {
         Response::error('No data provided', 400);
         }
-        $rx = PrescriptionService::update($id, (int) $auth['tenant_id'], $payload);
+        $rx = PrescriptionService::update($id, $payload);
         Response::success('Prescription updated', $rx);
     }
     // PATCH /prescriptions/{id}/status
@@ -66,14 +66,14 @@ class PrescriptionController {
         if (empty($payload['status'])) {
         Response::error('Status is required', 400);
         }
-        $rx = PrescriptionService::updateStatus($id, (int) $auth['tenant_id'], $payload['status']);
+        $rx = PrescriptionService::updateStatus($id,  $payload['status']);
         Response::success('Prescription status updated', $rx);
     }
     // DELETE /prescriptions/{id}
     public static function destroy(int $id): void {
         $auth = AuthMiddleware::handle();
         AuthMiddleware::allowRoles($auth, ['admin', 'doctor']);
-        PrescriptionService::delete($id, (int) $auth['tenant_id']);
+        PrescriptionService::delete($id, );
         Response::success('Prescription deleted');
     }
 }
