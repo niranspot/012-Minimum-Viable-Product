@@ -15,7 +15,7 @@ function route($method,$uri, $handler){
     $requestUri    = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
     // Remove base path
-    $basePath   = '/newphp1/Php_Tasks/012MinimumViableProduct/public';
+    $basePath   = '/012-Minimum-Viable-Product/public';
     $requestUri = str_replace($basePath, '', $requestUri);
     $requestUri = '/' . trim($requestUri, '/');
 
@@ -32,7 +32,7 @@ function routeWithId($method, $prefix, $handler) {
     $requestMethod = $_SERVER['REQUEST_METHOD'];
     $requestUri    = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
-    $basePath   = '/newphp1/Php_Tasks/012MinimumViableProduct/public';
+    $basePath   = '/012-Minimum-Viable-Product/public';
     $requestUri = str_replace($basePath, '', $requestUri);
     $requestUri = '/' . trim($requestUri, '/');
 
@@ -51,7 +51,7 @@ function routeMatch($method, $pattern, $handler) {
     $requestMethod = $_SERVER['REQUEST_METHOD'];
     $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
-    $basePath = '/newphp1/Php_Tasks/012MinimumViableProduct/public';
+    $basePath = '/012-Minimum-Viable-Product/public';
     $requestUri = str_replace($basePath, '', $requestUri);
     $requestUri = '/' . trim($requestUri, '/');
 
