@@ -58,7 +58,7 @@ function getDB() {
         $subdomain = getSubdomain();
         if (!$subdomain) {
             $requestUri = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
-            $basePath   = '/newphp1/Php_Tasks/012MinimumViableProduct/public';
+            $basePath   = '/012-Minimum-Viable-Product/public';
             $requestUri = str_replace($basePath, '', $requestUri);
             $requestUri = '/' . trim($requestUri, '/');
 
