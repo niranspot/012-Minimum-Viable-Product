@@ -8,6 +8,7 @@ require_once __DIR__ . '/../Controllers/BillingController.php';
 require_once __DIR__ . '/../Controllers/MessageController.php';
 require_once __DIR__ . '/../Controllers/DashboardController.php';
 require_once __DIR__ . '/../Controllers/UserController.php';
+require_once __DIR__ . '/../Controllers/MasterAuthController.php';
 
 
 //-Niranjan
@@ -87,6 +88,7 @@ route('POST', '/logout', [AuthController::class, 'logout']);
 route('GET', '/csrf-token',         [AuthController::class, 'csrf']);
 route('GET', '/tenant/config',      [AuthController::class, 'tenantConfig']);
 route('PUT', '/tenant/theme',       [AuthController::class, 'updateTheme']);
+route('POST', '/master/login', [MasterAuthController::class, 'login']);
 
 route('GET', '/users', [UserController::class, 'listUsers']);
 routeMatch('PUT', '/users/:id/status', [UserController::class, 'updateStatus']);
