@@ -5,7 +5,7 @@ CREATE TABLE users (
     email VARCHAR(100) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     role ENUM('admin', 'doctor', 'nurse', 'patient', 'pharmacist') NOT NULL,
-    status ENUM('active', 'inactive') DEFAULT 'active',
+    status ENUM('active', 'inactive') DEFAULT 'inactive',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     refresh_token VARCHAR(255) NULL,
     refresh_token_expires_at TIMESTAMP NULL

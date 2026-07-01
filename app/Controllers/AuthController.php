@@ -43,8 +43,18 @@ class AuthController {
             Response::error('theme_settings is required', 400);
         }
 
-        AuthService::updateTheme((int) $auth['tenant_id'], $payload['theme_settings']);
-        Response::success('Tenant theme updated successfully');
+        $allowed = ['dark', 'warm'];
+        if (!in_array($payload['theme_settings'], $allowed)) {
+            Response::error('Invalid theme value', 400);
+        }
+
+        $subdomain = getSubdomain();
+        if (!$subdomain) {
+            Response::error('Tenant context required', 400);
+        }
+
+        $result = AuthService::updateTheme($subdomain, $payload['theme_settings']);
+        Response::success('Tenant theme updated successfully', $result);
     }
 
     public static function register(){
@@ -78,9 +88,6 @@ class AuthController {
         }
 
         $result = AuthService::login($payload);
-        // Generate a new CSRF token on login and include it in the response. The frontend can store this and send it in the X-CSRF-Token header for subsequent requests.
-        $token = CSRF::generate();
-        $result['csrf_token'] = $token;
         Response::success('Login successful', $result);
 
     }

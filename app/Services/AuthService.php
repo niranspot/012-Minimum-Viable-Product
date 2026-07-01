@@ -96,11 +96,12 @@ class AuthService {
         ];
     }
 
-    public static function updateTheme($tenantId, $themeSettings) {
+    public static function updateTheme($subdomain, $themeSettings) {
         $db = getMasterDB();
-        $themeStr = is_array($themeSettings) ? json_encode($themeSettings) : (string) $themeSettings;
-        $stmt = $db->prepare("UPDATE tenants SET theme_settings = ? WHERE id = ?");
-        $stmt->execute([$themeStr, $tenantId]);
+        $stmt = $db->prepare("UPDATE tenants SET theme_settings = ? WHERE subdomain = ?");
+        $stmt->execute([$themeSettings, $subdomain]);
+
+        return ['subdomain' => $subdomain, 'theme_settings' => $themeSettings];
     }
 
     public static function register( $data) {
@@ -113,14 +114,7 @@ class AuthService {
             Response::error('Email already exists', 400);
         }
 
-        // Check tenant exists
-        // $stmt = $db->prepare("SELECT id FROM tenants WHERE id = ? AND status = 'active'");
-        // $stmt->execute([$data['tenant_id']]);
-        // if (!$stmt->fetch()) {
-        //     Response::error('Invalid tenant', 400);
-        // }
 
-        // Insert user
         $stmt = $db->prepare("INSERT INTO users ( name, email, password, role) VALUES (?, ?, ?, ?)");
         $stmt->execute([
             $data['name'],
@@ -135,7 +129,7 @@ class AuthService {
     public static function login($data){
         $db = getDB();
 
-        $stmt = $db->prepare("SELECT * FROM users WHERE email = ? AND status = 'active'");
+        $stmt = $db->prepare("SELECT * FROM users WHERE email = ? ");
         $stmt->execute([$data['email']]);
         $user = $stmt->fetch();
 
@@ -144,6 +138,10 @@ class AuthService {
         if (!$user || !Hash::verify($data['password'], $user['password'])) {
             Response::error('Invalid credentials', 401);
         }
+
+            if ($user['status'] !== 'active') {
+                Response::error('Your account is pending admin approval', 403);
+            }
 
         $accessToken  = JWT::generateAccess([
             'user_id'   => $user['id'],
@@ -247,8 +245,8 @@ class AuthService {
         ]);
 
         // Clear CSRF token from session
-        if (session_status() === PHP_SESSION_NONE) session_start();
-        unset($_SESSION['csrf_token']);
-        session_destroy();
+        // if (session_status() === PHP_SESSION_NONE) session_start();
+        // unset($_SESSION['csrf_token']);
+        // session_destroy();
     }
 }
