@@ -215,15 +215,21 @@ class AppointmentService {
         $role     = $authUser['role'];
         $userId   = (int) $authUser['user_id'];
 
-        $fromDate = date('Y-m-d H:i:s', strtotime($from));
-        $toDate   = date('Y-m-d H:i:s', strtotime($to));
+        $fromTimestamp = strtotime($from);
+$toTimestamp   = strtotime($to);
 
-        if (!$fromDate || $fromDate === '1970-01-01 00:00:00') {
-            Response::error('Invalid from date. Use: YYYY-MM-DD', 400);
-        }
-        if (!$toDate || $toDate === '1970-01-01 00:00:00') {
-            Response::error('Invalid to date. Use: YYYY-MM-DD', 400);
-        }
+if (!$fromTimestamp) {
+    Response::error('Invalid from date. Use: YYYY-MM-DD', 400);
+}
+if (!$toTimestamp) {
+    Response::error('Invalid to date. Use: YYYY-MM-DD', 400);
+}
+
+// "from" starts at 00:00:00, "to" must include the full end day (23:59:59),
+// otherwise any appointment booked later than midnight on the last day
+// of the range is silently excluded from the BETWEEN clause below.
+$fromDate = date('Y-m-d 00:00:00', $fromTimestamp);
+$toDate   = date('Y-m-d 23:59:59', $toTimestamp);
 
         if ($role === 'patient') {
             $patientId = self::resolvePatientId($userId);
