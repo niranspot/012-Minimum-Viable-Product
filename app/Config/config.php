@@ -27,6 +27,7 @@ loadEnv(dirname(__DIR__, 2) . '/.env');
 define('APP_NAME',  getenv('APP_NAME'));
 define('APP_ENV',   getenv('APP_ENV'));
 define('APP_URL',   getenv('APP_URL'));
+define('APP_BASE_PATH',  getenv('APP_BASE_PATH'));
 
 // Database
 define('DB_HOST',   getenv('DB_HOST'));
