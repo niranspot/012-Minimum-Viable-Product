@@ -3,12 +3,28 @@ require_once __DIR__ . '/../Services/UserService.php';
 
 class UserController {
 
+    //all users except admin
     public static function listUsers() {
         $auth = AuthMiddleware::handle();
-        AuthMiddleware::allowRoles($auth, ['admin']);
-
+        AuthMiddleware::allowRoles($auth, ['admin','patient','doctor']);
         $users = UserService::listUsers();
         Response::success('Users retrieved', $users);
+    }
+
+    //only doctors
+    public static function listDoctors() {
+        $auth = AuthMiddleware::handle();
+        AuthMiddleware::allowRoles($auth, ['admin','patient','doctor']);
+        $users = UserService::listDoctors();
+        Response::success('Doctors retrieved', $users);
+    }
+
+    //patients
+    public static function listPatients() {
+        $auth = AuthMiddleware::handle();
+        AuthMiddleware::allowRoles($auth, ['admin','patient','doctor']);
+        $users = UserService::listPatients();
+        Response::success('Patient retrieved', $users);
     }
 
     public static function updateStatus($id) {

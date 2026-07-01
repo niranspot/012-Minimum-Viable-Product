@@ -10,7 +10,9 @@ class CsrfMiddleware {
         '/refresh-token',
         '/csrf-token',
         '/tenant/signup',
-        '/master/login'
+        '/master/login',
+        '/users/doctors',
+        '/users/patients'
     ];
 
     public static function handle() {

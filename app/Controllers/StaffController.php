@@ -8,7 +8,7 @@ class StaffController {
     // GET /staff
     public static function index() {
         $auth = AuthMiddleware::handle();
-        AuthMiddleware::allowRoles($auth, ['admin', 'doctor', 'nurse']);
+        AuthMiddleware::allowRoles($auth, ['admin', 'doctor', 'nurse','Patient']);
         $staff = StaffService::getAll();
         Response::success('Staff list retrieved', $staff);
     }

@@ -91,6 +91,8 @@ route('PUT', '/tenant/theme',       [AuthController::class, 'updateTheme']);
 route('POST', '/master/login', [MasterAuthController::class, 'login']);
 
 route('GET', '/users', [UserController::class, 'listUsers']);
+route('GET', '/users/doctors', [UserController::class, 'listDoctors']);
+route('GET', '/users/patients', [UserController::class, 'listPatients']);
 routeMatch('PUT', '/users/:id/status', [UserController::class, 'updateStatus']);
 
 
