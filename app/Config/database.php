@@ -58,7 +58,7 @@ function getDB() {
         $subdomain = getSubdomain();
         if (!$subdomain) {
             $requestUri = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
-            $basePath   = '/newphp1/Php_Tasks/012MinimumViableProduct/public';
+            $basePath   = APP_BASE_PATH;
             $requestUri = str_replace($basePath, '', $requestUri);
             $requestUri = '/' . trim($requestUri, '/');
 
@@ -143,8 +143,7 @@ function runTenantMigrations($pdo, $tenant) {
         throw new Exception('tenant_schema.sql file not found');
     }
     $sql = file_get_contents($schemaPath);
-    
-    // Split statements by semicolon and run them one by one
+
     $queries = explode(';', $sql);
     foreach ($queries as $query) {
         $trimmed = trim($query);
@@ -154,9 +153,8 @@ function runTenantMigrations($pdo, $tenant) {
     }
 
     // Seed the owner/admin user in the tenant DB
-    $stmt = $pdo->prepare("INSERT INTO users (tenant_id, name, email, password, role, status) VALUES (?, ?, ?, ?, ?, ?)");
+    $stmt = $pdo->prepare("INSERT INTO users (name, email, password, role, status) VALUES (?, ?, ?, ?, ?)");
     $stmt->execute([
-        (int) $tenant['id'],
         $tenant['company_name'],
         $tenant['email'],
         $tenant['password'], // Already hashed

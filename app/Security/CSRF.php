@@ -2,9 +2,10 @@
 class CSRF {
     public static function generate(): string {
         if (session_status() === PHP_SESSION_NONE) session_start();
-        $token = bin2hex(random_bytes(32));
-        $_SESSION['csrf_token'] = $token;
-        return $token;
+        if (empty($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        }
+        return $_SESSION['csrf_token'];
     }
 
     public static function validate(): bool {

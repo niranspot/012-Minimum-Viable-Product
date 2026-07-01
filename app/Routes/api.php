@@ -7,6 +7,7 @@ require_once __DIR__ . '/../Controllers/PrescriptionController.php';
 require_once __DIR__ . '/../Controllers/BillingController.php';
 require_once __DIR__ . '/../Controllers/MessageController.php';
 require_once __DIR__ . '/../Controllers/DashboardController.php';
+require_once __DIR__ . '/../Controllers/UserController.php';
 
 
 //-Niranjan
@@ -86,6 +87,9 @@ route('POST', '/logout', [AuthController::class, 'logout']);
 route('GET', '/csrf-token',         [AuthController::class, 'csrf']);
 route('GET', '/tenant/config',      [AuthController::class, 'tenantConfig']);
 route('PUT', '/tenant/theme',       [AuthController::class, 'updateTheme']);
+
+route('GET', '/users', [UserController::class, 'listUsers']);
+routeMatch('PUT', '/users/:id/status', [UserController::class, 'updateStatus']);
 
 
 //billing routes (admin, doctor only — enforced inside controller)
